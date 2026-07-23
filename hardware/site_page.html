@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>moon-temp-tracer — Wheatstone-Bridge Thermal Sensor Circuit</title>
+<link rel="icon" href="/favicon.png">
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="Goose">
+<meta property="og:title"       content="moon-temp-tracer — Wheatstone-Bridge Thermal Sensor Circuit">
+<meta property="og:description" content="Wheatstone-bridge NTC sensor circuit for moon-temp-tracer: LM4040 excitation, ADS1115 differential input, power-gated sensor boards.">
+<meta property="og:url"         content="https://rooster.ninja/skunk_werks/moon_temp_tracer/thermal_sensor_circuit/">
+<meta property="og:image"       content="https://rooster.ninja/goose_preview.jpg">
+<meta property="og:image:width" content="1209">
+<meta property="og:image:height" content="500">
+<meta name="twitter:card"       content="summary_large_image">
+<meta name="twitter:image"      content="https://rooster.ninja/goose_preview.jpg">
+<meta name="twitter:title"      content="moon-temp-tracer — Wheatstone-Bridge Thermal Sensor Circuit">
+<style>
+  :root {
+    --bg:#0d0f12; --surface:#151820; --border:#252a35; --accent:#4fa3e0; --accent2:#7ed6a0;
+    --text:#d8dce8; --muted:#8b929e; --heading:#f0f4ff; --warn:#f5a623;
+    --wire:#d8dce8; --panel:#151820; --panel-border:#252a35; --dash-border:#3a4150;
+    --table-head:#1a1e28; --table-border:#252a35;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text); margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 16px; line-height: 1.65;
+  }
+  .breadcrumb {
+    max-width: 960px; margin: 0 auto; padding: 1.5rem 1.25rem 0; font-size: 0.85rem; color: var(--muted);
+  }
+  .breadcrumb a { color: var(--accent); text-decoration: none; }
+  header { padding: 2.5rem 1.5rem 2.5rem; text-align: center; }
+  header .tag {
+    display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 3px; padding: 0.2em 0.7em; margin-bottom: 1.1rem;
+  }
+  header h1 {
+    font-size: clamp(1.8rem, 5vw, 2.8rem); font-weight: 700; color: var(--heading);
+    letter-spacing: -0.02em; line-height: 1.2; margin: 0 0 0.9rem;
+  }
+  header .subtitle { font-size: 1.05rem; color: var(--muted); max-width: 640px; margin: 0 auto; }
+  main { max-width: 960px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  section { margin-top: 3rem; }
+  h2 {
+    font-size: 1.3rem; font-weight: 600; color: var(--heading); letter-spacing: -0.01em;
+    margin: 0 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 0.82rem; font-weight: 600; color: var(--accent); margin: 1.5rem 0 0.6rem;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  p { margin: 0 0 0.9rem; color: var(--text); }
+  code { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 0.1em 0.4em; font-size: 0.92em; }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.2rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; }
+  table.ref { border-collapse: collapse; width: 100%; font-size: 0.87rem; margin: 0.5rem 0 1.2rem; }
+  table.ref th, table.ref td { border: 1px solid var(--table-border); padding: 0.5rem 0.7rem; text-align: left; }
+  table.ref th { background: var(--table-head); color: var(--heading); }
+  .notecol { display: flex; gap: 2.5rem; flex-wrap: wrap; margin-top: 1rem; }
+  .notecol > div { flex: 1 1 260px; }
+  ul.notes, ul.plain { margin: 0 0 1rem; padding-left: 1.2rem; font-size: 0.92rem; line-height: 1.6; color: var(--text); }
+  .scroll-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); margin-top: 1rem; }
+  svg { display: block; min-width: 1400px; }
+  text { fill: var(--text); }
+  .panel-title { font-size: 13px; font-weight: 700; fill: var(--accent); letter-spacing: 0.02em; }
+  .lbl { font-size: 11.5px; fill: var(--text); }
+  .lbl-muted { font-size: 10.5px; fill: var(--muted); }
+  .netlbl { font-size: 11px; fill: var(--accent); font-weight: 600; }
+  .icname { font-size: 13px; font-weight: 700; fill: var(--heading); }
+  .wire { stroke: var(--wire); stroke-width: 1.6; fill: none; }
+  .wire-dash { stroke: var(--wire); stroke-width: 1.6; fill: none; stroke-dasharray: 4 3; }
+  .sym { stroke: var(--wire); stroke-width: 1.6; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+  .ic-box { stroke: var(--wire); stroke-width: 1.8; fill: var(--bg); }
+  .panel-bg { fill: var(--panel); stroke: var(--panel-border); stroke-width: 1; }
+  .panel-bg-dash { fill: none; stroke: var(--dash-border); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .junction { fill: var(--wire); }
+  .conn { fill: var(--bg); stroke: var(--wire); stroke-width: 1.6; }
+  footer { text-align: center; padding: 2rem 1rem 3rem; color: var(--muted); font-size: 0.8rem; }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="breadcrumb"><a href="/">Goose</a> / <a href="/skunk_werks/">Skunk Werks</a> / moon-temp-tracer thermal sensor circuit</div>
+
+<header>
+  <div class="tag">Skunk Werks &middot; Circuit Design &middot; Rev D</div>
+  <h1>moon-temp-tracer — Wheatstone-Bridge Thermal Sensor Circuit</h1>
+  <p class="subtitle">Gen-2 moon-tracking thermal sensor. Replaces the single-ended divider used in <code>moon_temp_ads1115</code> with a Wheatstone half-bridge + LM4040 excitation feeding the ADS1115's differential inputs — power-gated, two independently addressed sensor units on one I&sup2;C bus.</p>
+</header>
+
+<main>
+
+<section>
+<h2>Schematic</h2>
+<div class="scroll-wrap">
+<svg viewBox="0 0 1800 1180" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <path id="zig" class="sym" d="M -30,0 L -22,0 L -16,-9 L -8,9 L 0,-9 L 8,9 L 16,-9 L 22,0 L 30,0" />
+    <g id="gnd">
+      <path class="sym" d="M 0,0 L 0,10" />
+      <path class="sym" d="M -13,10 L 13,10" />
+      <path class="sym" d="M -8,15 L 8,15" />
+      <path class="sym" d="M -3.5,20 L 3.5,20" />
+    </g>
+    <g id="cap">
+      <path class="sym" d="M -16,0 L -4,0" />
+      <path class="sym" d="M 4,0 L 16,0" />
+      <path class="sym" d="M -4,-11 L -4,11" />
+      <path class="sym" d="M 4,-11 L 4,11" />
+    </g>
+    <g id="ref">
+      <path class="sym" d="M 0,-18 L 0,-6" />
+      <path class="sym" d="M -11,-6 L 11,-6" />
+      <path class="sym" d="M -11,-6 L -15,-11" />
+      <path class="sym" d="M 11,-6 L 15,-1" />
+      <path class="sym" d="M -11,18 L 11,18 L 0,-6 Z" />
+      <path class="sym" d="M 0,18 L 0,30" />
+    </g>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--wire)" />
+    </marker>
+  </defs>
+
+  <rect class="panel-bg" x="40" y="60" width="340" height="470" rx="6" />
+  <text class="panel-title" x="56" y="82">&#9312; EXCITATION REFERENCE</text>
+
+  <rect class="panel-bg" x="400" y="60" width="600" height="470" rx="6" />
+  <text class="panel-title" x="416" y="82">&#9313; BRIDGE NETWORK — SENSOR UNIT 1 (U1, ADDR&rarr;GND &rArr; 0x48)</text>
+
+  <rect class="panel-bg" x="1020" y="60" width="220" height="470" rx="6" />
+  <text class="panel-title" x="1036" y="82">&#9314; ADS1115 (U1)</text>
+
+  <rect class="panel-bg" x="1260" y="60" width="500" height="470" rx="6" />
+  <text class="panel-title" x="1276" y="82">&#9315; I&sup2;C BUS + HOST (ESP32-C3, existing)</text>
+
+  <rect class="panel-bg-dash" x="400" y="560" width="860" height="150" rx="6" />
+  <text class="panel-title" x="416" y="582">&#9316; SENSOR UNIT 2 — identical to Unit 1, ADDR&rarr;VDD &rArr; 0x49</text>
+
+  <text class="netlbl" x="112" y="112">SWITCHED_3V3</text>
+  <text class="lbl-muted" x="112" y="124">(from Q1 power gate — see &#9318;)</text>
+  <line class="wire" x1="140" y1="130" x2="140" y2="150" />
+  <g transform="translate(140,180) rotate(90)"><use href="#zig" /></g>
+  <text class="lbl" x="158" y="176">R4  1.2k&Omega;</text>
+  <circle class="junction" r="3.2" cx="140" cy="210" />
+  <text class="netlbl" x="160" y="207">VEXC &approx; 2.048V</text>
+
+  <line class="wire" x1="140" y1="210" x2="140" y2="240" />
+  <use href="#ref" x="140" y="240" />
+  <text class="lbl" x="160" y="262">U3  LM4040AEM3-2.048</text>
+  <text class="lbl-muted" x="160" y="276">A-grade, &plusmn;0.1%, &le;15ppm/&deg;C</text>
+  <line class="wire" x1="140" y1="288" x2="140" y2="300" />
+  <use href="#gnd" x="140" y="300" />
+
+  <line class="wire" x1="140" y1="210" x2="230" y2="210" />
+  <circle class="junction" r="3" cx="230" cy="210" />
+  <line class="wire" x1="230" y1="210" x2="230" y2="228" />
+  <use href="#cap" x="230" y="240" transform="rotate(90 230 240)" />
+  <line class="wire" x1="230" y1="252" x2="230" y2="270" />
+  <use href="#gnd" x="230" y="270" />
+  <text class="lbl" x="248" y="244">C1  10&micro;F</text>
+
+  <line class="wire" x1="230" y1="210" x2="300" y2="210" />
+  <circle class="junction" r="3" cx="300" cy="210" />
+  <line class="wire" x1="300" y1="210" x2="300" y2="228" />
+  <use href="#cap" x="300" y="240" transform="rotate(90 300 240)" />
+  <line class="wire" x1="300" y1="252" x2="300" y2="270" />
+  <use href="#gnd" x="300" y="270" />
+  <text class="lbl" x="308" y="244">C2</text>
+  <text class="lbl" x="308" y="257">100nF</text>
+
+  <text class="lbl-muted" x="60" y="440">Bias current &approx;1.04mA through R4; after bridge draw</text>
+  <text class="lbl-muted" x="60" y="454">(&approx;100-245&micro;A) LM4040 still sees &ge;800&micro;A — well above</text>
+  <text class="lbl-muted" x="60" y="468">its ~60&micro;A min bias spec across the full temp range.</text>
+  <text class="lbl-muted" x="60" y="488">C1/C2: ceramic, X7R — stable across -55..125&deg;C (better</text>
+  <text class="lbl-muted" x="60" y="502">cold-temp behavior than tantalum/electrolytic). C1 in</text>
+  <text class="lbl-muted" x="60" y="516">0805+ case, &ge;10V rating to keep DC-bias derating modest.</text>
+
+  <line class="wire" x1="140" y1="210" x2="1080" y2="210" />
+  <circle class="junction" r="3.2" cx="480" cy="210" />
+  <circle class="junction" r="3.2" cx="740" cy="210" />
+  <text class="lbl-muted" x="820" y="200">Vexc bus — same net feeds R1 top, R3 top, and AIN0 directly</text>
+
+  <g transform="translate(480,245) rotate(0)"><use href="#zig" transform="rotate(90)" /></g>
+  <text class="lbl" x="500" y="230">R1  10.0k&Omega; 0.01%</text>
+  <text class="lbl-muted" x="500" y="243">&plusmn;5ppm/&deg;C (RNCF0603TKY10K0)</text>
+  <circle class="junction" r="3.2" cx="480" cy="280" />
+  <line class="wire" x1="480" y1="280" x2="1080" y2="280" />
+
+  <g transform="translate(480,315) rotate(0)"><use href="#zig" transform="rotate(90)" /></g>
+  <text class="lbl" x="500" y="300">R2  10.0k&Omega; 0.01%</text>
+  <text class="lbl-muted" x="500" y="313">&plusmn;5ppm/&deg;C (RNCF0603TKY10K0)</text>
+  <line class="wire" x1="480" y1="350" x2="480" y2="360" />
+  <use href="#gnd" x="480" y="360" />
+
+  <line class="wire" x1="480" y1="210" x2="480" y2="215" />
+  <line class="wire" x1="480" y1="275" x2="480" y2="285" />
+  <line class="wire" x1="480" y1="345" x2="480" y2="350" />
+
+  <text class="lbl" x="440" y="490">AIN1 = V(mid-ref) — bridge AINP</text>
+
+  <g transform="translate(740,245) rotate(0)"><use href="#zig" transform="rotate(90)" /></g>
+  <text class="lbl" x="760" y="230">R3  10.0k&Omega; 0.01%</text>
+  <text class="lbl-muted" x="760" y="243">&plusmn;5ppm/&deg;C (co-located, same swing as NTC)</text>
+  <line class="wire" x1="740" y1="210" x2="740" y2="215" />
+  <line class="wire" x1="740" y1="275" x2="740" y2="285" />
+  <line class="wire" x1="740" y1="280" x2="740" y2="340" />
+  <circle class="junction" r="3.2" cx="740" cy="340" />
+  <line class="wire" x1="740" y1="340" x2="1080" y2="340" />
+
+  <line class="wire" x1="740" y1="340" x2="740" y2="368" />
+  <circle class="conn" r="4.5" cx="740" cy="373" />
+  <text class="lbl-muted" x="756" y="377">J1 — short flying leads to bar-mounted NTC</text>
+  <line class="wire-dash" x1="740" y1="378" x2="740" y2="410" />
+
+  <g transform="translate(740,445) rotate(0)"><use href="#zig" transform="rotate(90)" /></g>
+  <line class="sym" x1="722" y1="428" x2="758" y2="462" marker-end="url(#arrow)" />
+  <text class="lbl" x="760" y="435">RT1 — B57861S0103F045, 10k&Omega;, B=3988K</text>
+  <text class="lbl-muted" x="760" y="448">thermal-epoxied to steel bar (remote)</text>
+  <line class="wire" x1="740" y1="475" x2="740" y2="490" />
+  <use href="#gnd" x="740" y="490" />
+
+  <text class="lbl" x="600" y="510">AIN3 = V(mid-sense) — bridge AINN</text>
+
+  <rect class="ic-box" x="1080" y="150" width="140" height="280" rx="3" />
+  <text class="icname" x="1150" y="215" text-anchor="middle">U1</text>
+  <text class="icname" x="1150" y="233" text-anchor="middle">ADS1115IDGSR</text>
+  <text class="lbl-muted" x="1150" y="249" text-anchor="middle">I&sup2;C 0x48</text>
+
+  <text class="lbl" x="1004" y="205">AIN0</text>
+  <text class="lbl-muted" x="1004" y="219">(Vexc / rail,</text>
+  <text class="lbl-muted" x="1004" y="231">single-ended)</text>
+  <text class="lbl" x="1004" y="275">AIN1</text>
+  <line class="wire" x1="1040" y1="310" x2="1080" y2="310" />
+  <text class="lbl-muted" x="1004" y="306">AIN2 — NC (spare)</text>
+  <text class="lbl" x="1004" y="335">AIN3</text>
+
+  <line class="wire" x1="1050" y1="400" x2="1080" y2="400" />
+  <line class="wire" x1="1050" y1="400" x2="1050" y2="420" />
+  <use href="#gnd" x="1050" y="420" />
+  <text class="lbl-muted" x="990" y="440">ADDR&rarr;GND &rArr; addr 0x48</text>
+
+  <line class="wire" x1="1220" y1="170" x2="1260" y2="170" />
+  <text class="lbl" x="1224" y="166">VDD</text>
+  <line class="wire" x1="1260" y1="170" x2="1260" y2="130" />
+  <text class="netlbl" x="1234" y="122">+3V3</text>
+
+  <line class="wire" x1="1220" y1="200" x2="1250" y2="200" />
+  <line class="wire" x1="1250" y1="200" x2="1250" y2="220" />
+  <use href="#gnd" x="1250" y="220" />
+  <text class="lbl" x="1224" y="196">GND</text>
+
+  <line class="wire" x1="1220" y1="250" x2="1300" y2="250" />
+  <text class="lbl" x="1224" y="246">SDA</text>
+  <line class="wire" x1="1220" y1="280" x2="1300" y2="280" />
+  <text class="lbl" x="1224" y="276">SCL</text>
+  <text class="lbl-muted" x="1224" y="320">ALERT/RDY — NC (unused,</text>
+  <text class="lbl-muted" x="1224" y="333">polled single-shot per firmware)</text>
+
+  <line class="wire" x1="1300" y1="250" x2="1660" y2="250" />
+  <line class="wire" x1="1300" y1="280" x2="1660" y2="280" />
+  <circle class="junction" r="3" cx="1350" cy="250" />
+  <circle class="junction" r="3" cx="1380" cy="280" />
+
+  <text class="netlbl" x="1552" y="130">+3V3</text>
+  <line class="wire" x1="1560" y1="138" x2="1560" y2="160" />
+  <g transform="translate(1560,188) rotate(90)"><use href="#zig" /></g>
+  <text class="lbl-muted" x="1508" y="170">R5 4.7k&Omega;</text>
+  <line class="wire" x1="1560" y1="216" x2="1560" y2="250" />
+  <circle class="junction" r="3" cx="1560" cy="250" />
+
+  <line class="wire" x1="1610" y1="138" x2="1610" y2="160" />
+  <line class="wire" x1="1560" y1="138" x2="1610" y2="138" />
+  <g transform="translate(1610,188) rotate(90)"><use href="#zig" /></g>
+  <text class="lbl-muted" x="1618" y="170">R6 4.7k&Omega;</text>
+  <line class="wire" x1="1610" y1="216" x2="1610" y2="280" />
+  <circle class="junction" r="3" cx="1610" cy="280" />
+  <text class="lbl-muted" x="1470" y="220">pull-ups live here only —</text>
+  <text class="lbl-muted" x="1470" y="233">not duplicated on sensor boards</text>
+
+  <rect class="ic-box" x="1660" y="200" width="90" height="160" rx="3" />
+  <text class="icname" x="1705" y="255" text-anchor="middle">ESP32</text>
+  <text class="icname" x="1705" y="271" text-anchor="middle">-C3</text>
+  <text class="lbl-muted" x="1705" y="287" text-anchor="middle">(existing)</text>
+  <text class="lbl" x="1560" y="263">GPIO21 (SDA)</text>
+  <text class="lbl" x="1560" y="293">GPIO20 (SCL)</text>
+  <text class="lbl-muted" x="1560" y="320">GPIO_PWR_EN (new, TBD) &rarr; drives Q1</text>
+  <text class="lbl-muted" x="1560" y="333">gate, see &#9318; (power gate, below)</text>
+
+  <text class="lbl-muted" x="1276" y="420">Sensor cable run &lt;1m — standard 4.7k&Omega; pull-ups + 400kHz</text>
+  <text class="lbl-muted" x="1276" y="434">fast-mode OK. Twisted pair for SDA/SCL, ground reference</text>
+  <text class="lbl-muted" x="1276" y="448">run alongside (board sits next to WiFi radio + buck reg).</text>
+
+  <line class="wire" x1="1350" y1="250" x2="1350" y2="620" />
+  <line class="wire" x1="1380" y1="280" x2="1380" y2="630" />
+
+  <path class="sym" d="M 440,630 l 60,0 l 0,-30 l 40,0 l 0,60 l -40,0 l 0,-30 l -60,0" />
+  <text class="lbl" x="450" y="640">R1/R2 (ref) + R3/RT1 (sense)</text>
+  <text class="lbl-muted" x="450" y="654">+ U4 LM4040 — same values as Unit 1</text>
+
+  <rect class="ic-box" x="700" y="595" width="130" height="60" rx="3" />
+  <text class="icname" x="765" y="620" text-anchor="middle">U2 ADS1115IDGSR</text>
+  <text class="lbl-muted" x="765" y="635" text-anchor="middle">0x49</text>
+  <line class="wire" x1="830" y1="610" x2="1350" y2="610" />
+  <line class="wire" x1="1350" y1="610" x2="1350" y2="620" />
+  <line class="wire" x1="830" y1="630" x2="1380" y2="630" />
+  <text class="lbl-muted" x="840" y="606">SDA</text>
+  <text class="lbl-muted" x="840" y="626">SCL</text>
+  <text class="lbl-muted" x="700" y="685">ADDR&rarr;VDD &rArr; addr 0x49 (only difference from Unit 1)</text>
+  <line class="wire" x1="600" y1="595" x2="600" y2="560" />
+  <line class="wire" x1="600" y1="560" x2="700" y2="560" />
+
+  <rect class="panel-bg" x="40" y="740" width="860" height="325" rx="6" />
+  <text class="panel-title" x="56" y="762">&#9318; POWER GATE (host board) — switches SWITCHED_3V3 feeding both sensor cables</text>
+
+  <text class="netlbl" x="112" y="800">+3V3 (always-on — also feeds ESP32)</text>
+  <line class="wire" x1="150" y1="806" x2="150" y2="830" />
+  <circle class="junction" r="3" cx="150" cy="830" />
+
+  <line class="wire" x1="150" y1="830" x2="150" y2="850" />
+  <rect class="ic-box" x="115" y="850" width="70" height="70" rx="3" />
+  <text class="icname" x="150" y="878" text-anchor="middle">Q1</text>
+  <text class="lbl-muted" x="150" y="893" text-anchor="middle">P-MOSFET</text>
+  <text class="lbl-muted" x="150" y="906" text-anchor="middle">SOT-23</text>
+  <text class="lbl-muted" x="94" y="846">S</text>
+  <line class="wire" x1="150" y1="920" x2="150" y2="960" />
+  <text class="lbl-muted" x="158" y="945">D</text>
+  <circle class="junction" r="3" cx="150" cy="960" />
+  <line class="wire" x1="150" y1="960" x2="330" y2="960" />
+  <text class="netlbl" x="340" y="964">SWITCHED_3V3</text>
+  <text class="lbl-muted" x="340" y="978">&rarr; feeds R4 in both sensor units (see &#9313;)</text>
+
+  <line class="wire" x1="230" y1="830" x2="230" y2="806" />
+  <line class="wire" x1="150" y1="830" x2="230" y2="830" />
+  <g transform="translate(230,795) rotate(0)"><use href="#zig" /></g>
+  <text class="lbl-muted" x="248" y="799">R7 10k&Omega; — default OFF at boot/reset</text>
+  <line class="wire" x1="230" y1="830" x2="230" y2="885" />
+  <line class="wire" x1="185" y1="885" x2="230" y2="885" />
+  <text class="lbl-muted" x="236" y="889">G</text>
+  <line class="wire" x1="230" y1="885" x2="330" y2="885" />
+  <text class="netlbl" x="340" y="889">GPIO_PWR_EN</text>
+  <text class="lbl-muted" x="340" y="902">ESP32 GPIO (new, TBD) — active-LOW:</text>
+  <text class="lbl-muted" x="340" y="915">LOW = sensors ON, HIGH/floating = OFF</text>
+
+  <text class="lbl-muted" x="60" y="990">Settling time: R4(1.2k&Omega;)+C1(10&micro;F) &rarr; &tau;&approx;12ms. Firmware must wait &ge;5&tau; (~50-100ms)</text>
+  <text class="lbl-muted" x="60" y="1003">after enabling SWITCHED_3V3 before triggering the first ADS1115 conversion.</text>
+  <text class="lbl-muted" x="60" y="1016">Self-heating: board draw &approx;4mW when on; gated to ~1-2s per 60s read (~2-3% duty)</text>
+  <text class="lbl-muted" x="60" y="1029">&rarr; ~30-40&times; lower average dissipation than continuous-on. NTC is remote (not on</text>
+  <text class="lbl-muted" x="60" y="1042">this board), so board self-heating doesn't couple directly into the reading anyway.</text>
+
+  <rect class="ic-box" x="1440" y="1080" width="320" height="80" rx="2" />
+  <line class="sym" x1="1440" y1="1104" x2="1760" y2="1104" />
+  <text class="icname" x="1452" y="1098">moon_temp_tracer</text>
+  <text class="lbl" x="1452" y="1120">Bridge Sensor Circuit — Rev D (power-gated)</text>
+  <text class="lbl-muted" x="1452" y="1136">Sheet 1 of 1 &middot; schematic (not layout)</text>
+  <text class="lbl-muted" x="1452" y="1152">See notes below for full BOM/rationale</text>
+
+</svg>
+</div>
+</section>
+
+<section>
+<h2>MUX / PGA config — per read cycle, both units</h2>
+<table class="ref">
+<tr><th>Read</th><th>MUX[2:0]</th><th>AINP</th><th>AINN</th><th>PGA</th><th>Purpose</th></tr>
+<tr><td>Bridge diff</td><td>010</td><td>AIN1</td><td>AIN3</td><td>010 (&plusmn;2.048V)</td><td>Bridge output &rarr; temperature</td></tr>
+<tr><td>Rail / Vexc</td><td>100</td><td>AIN0</td><td>GND</td><td>001 (&plusmn;4.096V)</td><td>Excitation health, read straight off the top of R1/R3</td></tr>
+</table>
+<p style="color:var(--muted);font-size:0.87rem">AIN2 is unused. ADS1115 only supports four fixed differential pairs — AIN0-AIN1, AIN0-AIN3, AIN1-AIN3, AIN2-AIN3 — so putting the rail monitor on AIN0 (single-ended) forces the bridge pair onto AIN1-AIN3.</p>
+</section>
+
+<section>
+<h2>Why a bridge</h2>
+<p><code>moon_temp_ads1115</code> uses a single-ended divider (3.3V &rarr; 10k&Omega; fixed &rarr; ADS1115 &rarr; NTC &rarr; GND), giving ~55 m&deg;C/count. Switching to a Wheatstone half-bridge on the ADS1115's differential inputs gets three things at once: much finer resolution near the balance point, rejection of common-mode noise/lead-resistance error on the signal path (both sides of the differential pair pick up the same noise, which cancels), and a ratiometric relationship to the excitation voltage rather than an absolute one.</p>
+</section>
+
+<section>
+<h2>Component values and why</h2>
+<table class="ref">
+<tr><th>Part</th><th>Value</th><th>Rationale</th></tr>
+<tr><td>U1, U2</td><td><b>ADS1115IDGSR</b> (TI, VSSOP-10)</td><td>Standard industrial grade, not the AEC-Q100 automotive <code>ADS1115BQDGSRQ1</code> variant — same core spec/data rate per TI's own pages; automotive qualification buys nothing here and typically costs more / has tighter sourcing.</td></tr>
+<tr><td>R1, R2, R3</td><td><b>RNCF0603TKY10K0</b> (Stackpole), 10.0k&Omega;, 0.01%, &plusmn;5ppm/&deg;C</td><td>Matched reference divider (R1/R2) plus the sense-leg fixed resistor (R3), which has no partner to cancel against — its own drift is direct sensor error, so it gets the same spec. This part comfortably exceeds the 0.1%/&le;25ppm/&deg;C this design originally called for.</td></tr>
+<tr><td>RT1, RT2</td><td><b>B57861S0103F045</b> (TDK/EPCOS), 10k&Omega; NTC, B25/100=3988K &plusmn;0.3%</td><td>Epoxy bead, PTFE-insulated 50mm leads — good fit for thermal-epoxy mounting to the steel bar. Resistance tolerance &plusmn;1% only affects absolute matching between the two sensor units, not the bridge math.</td></tr>
+<tr><td>U3, U4</td><td>LM4040AEM3-2.048, A-grade</td><td>2.048V variant lines up with the ADS1115's own &plusmn;2.048V PGA setting. A-grade (~&plusmn;15ppm/&deg;C) matters because its drift scales the entire bridge output proportionally.</td></tr>
+<tr><td>R4</td><td>1.2k&Omega;</td><td>Bias resistor for the LM4040 shunt. From SWITCHED_3V3 this gives &approx;1.04mA; after the bridge draws its own 100-245&micro;A, &ge;800&micro;A still flows through the LM4040 — comfortably above its ~60&micro;A minimum bias spec.</td></tr>
+<tr><td>C1, C2</td><td>10&micro;F / 100nF, ceramic, X7R</td><td>Bulk + high-frequency decoupling at the Vexc node. X7R stays stable across -55&deg;C to +125&deg;C — better cold-temperature behavior than tantalum/electrolytic, which degrade below about -25&deg;C.</td></tr>
+<tr><td>R5, R6</td><td>4.7k&Omega;</td><td>I&sup2;C pull-ups — placed once, at the ESP32 end only. Stay on the ESP32's always-on 3.3V, not the switched branch.</td></tr>
+<tr><td>Q1</td><td>P-channel MOSFET, e.g. DMG2305UX / AO3401A (SOT-23)</td><td>High-side switch gating SWITCHED_3V3. Placeholder recommendation — current draw here is trivial.</td></tr>
+<tr><td>R7</td><td>~10k&Omega;</td><td>Q1 gate pull-up to 3.3V — keeps the sensor branch OFF by default during ESP32 boot/reset.</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Worked numbers (B57861S0103F045, B=3988K, -30&deg;C to 45&deg;C)</h2>
+<p>NTC resistance is highly non-linear over this range: ~4.3k&Omega; at 45&deg;C &rarr; ~206k&Omega; at -30&deg;C. With R3=10k&Omega; (bridge nulled at 25&deg;C):</p>
+<table class="ref">
+<tr><th>Temp</th><th>R_NTC</th><th>V_diff (AIN1&minus;AIN3)</th></tr>
+<tr><td>-30&deg;C</td><td>&approx;206k&Omega;</td><td>&approx; -0.93V</td></tr>
+<tr><td>25&deg;C</td><td>10k&Omega;</td><td>0V (balanced)</td></tr>
+<tr><td>45&deg;C</td><td>&approx;4.3k&Omega;</td><td>&approx; +0.41V</td></tr>
+</table>
+<p>PGA &plusmn;2.048V gives ~2.2&times; headroom over the -30&deg;C extreme, avoiding clipping even with thermistor tolerance and self-heating factored in. Resolution at that PGA is 62.5&micro;V/LSB; near 25&deg;C that's roughly <b>~328 counts/&deg;C</b> — about 18&times; finer than the existing single-ended design's ~55 m&deg;C/count. Temperature is recovered by inverting the actual bridge equation for R_NTC from V_diff (not a linear approximation), then feeding that into the Beta equation.</p>
+</section>
+
+<section>
+<h2>Power-gating</h2>
+<p>Both sensor boards are only powered during the brief read window, not continuously. <code>SWITCHED_3V3</code> is a branch off the main 3.3V rail, gated by a single high-side P-channel MOSFET (Q1) at the host end — one switch for both sensor cables, since they're already read back-to-back in the same MQTT <code>SendData</code> cycle. The ESP32's own 3.3V supply is upstream of Q1 and stays continuously powered. SWITCHED_3V3 feeds the ADS1115's VDD too, not just the LM4040/bridge chain.</p>
+<p><b>Settling time:</b> R4 (1.2k&Omega;) + C1 (10&micro;F) at the Vexc node form an RC with &tau;&approx;12ms. Firmware needs to wait &ge;5&tau; (~50-100ms) after enabling SWITCHED_3V3 before triggering the first ADS1115 conversion. Trivial against a 60s read interval.</p>
+<p><b>Self-heating:</b> board draw when on is &approx;4mW. Continuous-on sustains that 24/7; gated to a ~1-2s window every 60s (~2-3% duty cycle) drops the average to ~100-130&micro;W — a 30-40&times; reduction. The NTC itself isn't on this board (remote on the steel bar via short flying leads), so board self-heating doesn't couple directly into the sensing element regardless.</p>
+<p><b>Electrical check:</b> with the branch de-energized, VDD/Vexc/all analog bridge nodes sit at 0V together. SDA/SCL/ADDR digital pins on a powered-down ADS1115 are still held at 3.3V by the host-side pull-ups — within spec, since the datasheet's digital I/O absolute max is a fixed GND-0.3V to 5.5V range, not referenced to VDD.</p>
+</section>
+
+<section>
+<h2>Addressing</h2>
+<table class="ref">
+<tr><th>Sensor</th><th>ADS1115 ADDR pin</th><th>I&sup2;C address</th></tr>
+<tr><td>Unit 1</td><td>GND</td><td>0x48 (same as existing moon_temp_ads1115)</td></tr>
+<tr><td>Unit 2</td><td>VDD</td><td>0x49</td></tr>
+</table>
+<p>Both share the ESP32's existing I&sup2;C bus (GPIO21=SDA, GPIO20=SCL). SDA/SCL address options (0x4A/0x4B) are still free for future expansion.</p>
+</section>
+
+<section>
+<h2>Physical / layout notes</h2>
+<ul class="plain">
+<li>Keep the entire bridge (R1-R3, LM4040, decoupling) on the small sensor PCB, right next to the ADS1115 — minimizes lead-resistance mismatch and EMI pickup on the signal path.</li>
+<li>The NTC is <b>not</b> on this PCB — it's thermal-epoxied directly to the steel bar and connects back via short flying leads (J1 in the schematic). Thermal epoxy is electrically non-conductive, and the PCB is additionally isolated from the bar with kapton tape layers.</li>
+<li>I&sup2;C run is &lt;1m for both units — standard 4.7k&Omega; pull-ups, 400kHz fast-mode is fine. Route SDA/SCL with a ground reference alongside (twisted pair even at this distance).</li>
+</ul>
+</section>
+
+<section>
+<h2>Relationship to Moon_Temp_Overview</h2>
+<p><code>Moon_Temp_Overview</code> documents a separate, related project — the gen-1 deployment (<code>moon-temp-001</code>), a static rig using three single-ended channels (two moonlit reference sensors averaged together, differenced in software against one shaded sensor). <code>moon-temp-tracer</code> is gen-2: different hardware, mechanically tracking the moon via stepper motors — not a continuation or replacement of the gen-1 rig, just related in concept.</p>
+</section>
+
+<section>
+<h2>Deferred to later passes</h2>
+<ul class="plain">
+<li>PCB layout/footprint placement.</li>
+<li>Firmware: MUX/PGA config registers, power-gate GPIO sequencing + settling delay, non-linear bridge-inversion + Beta-equation (B=3988K) calculation, MQTT payload shape.</li>
+<li>Connector/cable choice, enclosure/potting for outdoor exposure.</li>
+</ul>
+</section>
+
+</main>
+
+<footer>
+  moon-temp-tracer &middot; <a href="/skunk_werks/">&larr; Skunk Werks</a>
+</footer>
+
+</body>
+</html>
