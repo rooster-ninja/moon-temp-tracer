@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Millstone-Differential Bridge — moon-temp-tracer Sensor Circuit</title>
+<link rel="icon" href="/favicon.png">
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="Goose">
+<meta property="og:title"       content="Millstone-Differential Bridge — moon-temp-tracer Sensor Circuit">
+<meta property="og:description" content="A Balanced Bridge Dimensionless Signal Detector (BBDSD) — centralized dual-thermistor differential bridge for moon-temp-tracer, digitally zeroed, split power domains.">
+<meta property="og:url"         content="https://rooster.ninja/skunk_werks/moon_temp_tracer/thermal_sensor_circuit_v2/">
+<meta property="og:image"       content="https://rooster.ninja/goose_preview.jpg">
+<meta property="og:image:width" content="1209">
+<meta property="og:image:height" content="500">
+<meta name="twitter:card"       content="summary_large_image">
+<meta name="twitter:image"      content="https://rooster.ninja/goose_preview.jpg">
+<meta name="twitter:title"      content="Millstone-Differential Bridge — moon-temp-tracer Sensor Circuit">
+<style>
+  :root {
+    --bg:#0d0f12; --surface:#151820; --border:#252a35; --accent:#4fa3e0; --accent2:#7ed6a0;
+    --text:#d8dce8; --muted:#8b929e; --heading:#f0f4ff; --warn:#f5a623;
+    --table-head:#1a1e28; --table-border:#252a35;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text); margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 16px; line-height: 1.65;
+  }
+  .breadcrumb {
+    max-width: 860px; margin: 0 auto; padding: 1.5rem 1.25rem 0; font-size: 0.85rem; color: var(--muted);
+  }
+  .breadcrumb a { color: var(--accent); text-decoration: none; }
+  header { padding: 2.5rem 1.5rem 2.5rem; text-align: center; }
+  header .tag {
+    display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 3px; padding: 0.2em 0.7em; margin-bottom: 1.1rem;
+  }
+  header h1 {
+    font-size: clamp(1.7rem, 5vw, 2.6rem); font-weight: 700; color: var(--heading);
+    letter-spacing: -0.02em; line-height: 1.2; margin: 0 0 0.6rem;
+  }
+  header .bbdsd { font-size: 1rem; color: var(--accent2); font-style: italic; margin: 0 0 1rem; }
+  header .subtitle { font-size: 1.05rem; color: var(--muted); max-width: 640px; margin: 0 auto; }
+  main { max-width: 860px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  section { margin-top: 3rem; }
+  h2 {
+    font-size: 1.3rem; font-weight: 600; color: var(--heading); letter-spacing: -0.01em;
+    margin: 0 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 0.82rem; font-weight: 600; color: var(--accent); margin: 1.5rem 0 0.6rem;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  p { margin: 0 0 0.9rem; color: var(--text); }
+  code { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 0.1em 0.4em; font-size: 0.92em; }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.2rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; }
+  table.ref { border-collapse: collapse; width: 100%; font-size: 0.87rem; margin: 0.5rem 0 1.2rem; }
+  table.ref th, table.ref td { border: 1px solid var(--table-border); padding: 0.5rem 0.7rem; text-align: left; }
+  table.ref th { background: var(--table-head); color: var(--heading); }
+  ul.plain { margin: 0 0 1rem; padding-left: 1.2rem; font-size: 0.92rem; line-height: 1.6; color: var(--text); }
+  .cite { color: var(--accent); text-decoration: none; font-size: 0.85em; vertical-align: super; }
+  .cite:hover { text-decoration: underline; }
+  .appendix-item { display: flex; gap: 0.6rem; margin-bottom: 0.7rem; font-size: 0.92rem; }
+  .appendix-num { color: var(--accent); font-weight: 600; flex-shrink: 0; }
+  .callout {
+    background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent2);
+    border-radius: 4px; padding: 0.9rem 1.1rem; font-size: 0.92rem; margin: 1rem 0;
+  }
+  .repo-link {
+    display: inline-block; color: var(--accent); text-decoration: none; border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.6rem 1.1rem; font-size: 0.92rem; margin-top: 0.5rem;
+  }
+  .repo-link:hover { border-color: var(--accent); }
+  footer { text-align: center; padding: 2rem 1rem 3rem; color: var(--muted); font-size: 0.8rem; }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="breadcrumb"><a href="/">Goose</a> / <a href="/skunk_werks/">Skunk Werks</a> / Millstone-Differential Bridge</div>
+
+<header>
+  <div class="tag">Skunk Werks &middot; Circuit Design &middot; Rev F</div>
+  <h1>Millstone-Differential Bridge</h1>
+  <p class="bbdsd">"A Balanced Bridge Dimensionless Signal Detector" (BBDSD)</p>
+  <p class="subtitle">Centralized dual-thermistor differential bridge for <code>moon-temp-tracer</code>'s moonlit-vs-shaded sensor comparison. One ADS1115, one LM4040, digitally zeroed, split power domains for precise read-timing control.</p>
+</header>
+
+<main>
+
+<section>
+<h2>What changed, and why</h2>
+<p>The original design <a class="cite" href="#appendix-1">[1]</a> used two independent half-bridges — each sensor measured against its own local fixed-resistor reference, each with its own ADS1115 and LM4040. "Is there a difference between the two sensors" was answered by subtracting two independently-calibrated absolute readings in software.</p>
+<p>The actual question this circuit needs to answer is narrower than two absolute temperatures: is there a difference, and which direction. Putting <b>both thermistors as the two active arms of one bridge</b> answers that directly, in hardware, instead of indirectly via software subtraction of two separately-erred measurements.</p>
+</section>
+
+<section>
+<h2>Why this topology</h2>
+<ul class="plain">
+<li><b>Direction is unambiguous everywhere in range.</b> NTC resistance and bridge midpoint voltage both move monotonically, so the sign of the differential output reliably tells you which sensor is colder — no sign reversal anywhere from -30&deg;C to 45&deg;C.</li>
+<li><b>Common-mode rejection is structural, not statistical.</b> Excitation drift, ADC gain error, and the huge seasonal/diurnal swing itself are shared by both arms and cancel in the bridge output, instead of needing two independently-built boards to happen to agree.</li>
+<li><b>"Dimensionless signal detector"</b> — the bridge's differential output is fundamentally a ratio (the relative mismatch between the two thermistor legs), not an absolute quantity. That's the core of the BBDSD framing.</li>
+<li><b>Resolution is much better on the signal that matters</b> — both thermistors track the same ambient swing together, so only their small difference shows up in the reading, letting a much tighter ADC gain setting be used than a design where one leg is frozen at a fixed reference.</li>
+</ul>
+</section>
+
+<section>
+<h2>Zeroing: digital offset, not a hardware trim</h2>
+<p>An earlier revision of this design included a physical trim potentiometer to null the bridge at build time. That hardware has been removed — zeroing is done entirely digitally instead, using the same mechanism <code>moon_temp_ads1115</code> already has proven in the field: an MQTT-settable per-channel offset, persisted to flash, added to the raw reading before publishing. No reflash needed to adjust it.</p>
+<p>Calibration procedure: with both thermistors sitting together at the same known temperature, the digital offset is set so the bridge reading is zero. After that, the calibrated signal should read as pure noise around zero — that's the validation criterion. A real signal during an actual moonlight event is then judged against that established noise floor, not against zero directly.</p>
+<div class="callout">Some drift over the sensor's lifetime is expected (thermistor aging, and the two units' Beta-value tolerance diverging slightly away from the calibration temperature). Periodic re-zeroing via the same MQTT command — no reflash required — is the mitigation. A single offset corrects a constant mismatch; the residual curve-mismatch still needs empirical multi-point calibration, same static-chamber approach as the gen-1 project's calibration notebook.</div>
+</section>
+
+<section>
+<h2>Split power domains</h2>
+<p>Two separate rails, on purpose:</p>
+<ul class="plain">
+<li><b>+3V3</b> — always-on, same rail the ESP32 and I&sup2;C pull-ups already use. The ADS1115's own supply lives here — the ADC is never power-cycled.</li>
+<li><b>SWITCHED_VEXC</b> — gated by a P-MOSFET, feeds only the bridge excitation path (bias resistor &rarr; LM4040 reference &rarr; the bridge itself).</li>
+</ul>
+<p>With the ADC continuously powered, there's no ADC power-on/reference-startup uncertainty mixed into the read timing. The only settling time left to account for is the bridge's own RC time constant — a single, precisely-known, purely-bridge-limited quantity. Firmware can control exactly how long the bridge has been energized before triggering a conversion, without that number being confounded by ADC startup time — directly serving the accuracy goal for this measurement.</p>
+</section>
+
+<section>
+<h2>Worked numbers</h2>
+<p>MF58-family NTC (B57861S0103F045, B=3988K), -30&deg;C to 45&deg;C range. Bridge sensitivity peaks at balance (~25&deg;C, where both arms are equal) and tapers toward both extremes:</p>
+<table class="ref">
+<tr><th>Ambient baseline</th><th>Sensitivity (dV/d&Delta;T)</th></tr>
+<tr><td>-30&deg;C</td><td>~6.1 mV/&deg;C (worst case)</td></tr>
+<tr><td>25&deg;C</td><td>~23.0 mV/&deg;C (peak, balanced)</td></tr>
+<tr><td>45&deg;C</td><td>~17.0 mV/&deg;C</td></tr>
+</table>
+<p>Even at the worst-case cold end, the chosen ADC gain setting (&plusmn;0.512V) covers a differential well beyond any plausible real effect without clipping, giving roughly <b>~780-2900 counts/&deg;C</b> depending on ambient baseline.</p>
+</section>
+
+<section>
+<h2>Full schematic &amp; source</h2>
+<p>The complete KiCad schematic, BOM rationale, and design notes are in the project repository — more detail than fits cleanly in a web summary, and kept in sync with the actual buildable files.</p>
+<a class="repo-link" href="https://github.com/rooster-ninja/moon-temp-tracer" target="_blank" rel="noopener">github.com/rooster-ninja/moon-temp-tracer &rarr;</a>
+</section>
+
+<section id="appendix">
+<h2>Appendix</h2>
+<div class="appendix-item">
+  <span class="appendix-num" id="appendix-1">[1]</span>
+  <span>Original design (Rev D) — two independent half-bridges, two ADS1115 + two LM4040. Superseded by the centralized single-bridge design above, but kept live as a record of the earlier approach. <a href="/skunk_werks/moon_temp_tracer/thermal_sensor_circuit/">rooster.ninja/skunk_werks/moon_temp_tracer/thermal_sensor_circuit/ &rarr;</a></span>
+</div>
+</section>
+
+</main>
+
+<footer>
+  Millstone-Differential Bridge &middot; <a href="/skunk_werks/">&larr; Skunk Werks</a>
+</footer>
+
+</body>
+</html>
