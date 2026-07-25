@@ -1,0 +1,263 @@
+ERC report (2026-07-24T23:44:04, Encoding UTF8)
+Report includes: Errors, Warnings
+
+***** Sheet /
+[duplicate_reference]: Duplicate items #PWR02
+
+    ; error
+    @(1550 mils, 3900 mils): Symbol #PWR02 [GND_SYM]
+    @(7150 mils, 5103 mils): Symbol #PWR02 [GND_SYM]
+[duplicate_reference]: Duplicate items #PWR03
+
+    ; error
+    @(2350 mils, 3900 mils): Symbol #PWR03 [GND_SYM]
+    @(2837 mils, 3500 mils): Symbol #PWR03 [GND_SYM]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(1000 mils, 3350 mils): Symbol #FLG5 [PWR_FLAG]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(1050 mils, 1650 mils): Symbol #FLG1 [PWR_FLAG]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(1450 mils, 1850 mils): Symbol R3 [GenericR]
+[footprint_link_issues]: The current configuration does not include the footprint library ''
+    ; warning
+    @(1450 mils, 9150 mils): Symbol U2 [LM4040A20IDBZR]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(1450 mils, 9150 mils): Symbol U2 [LM4040A20IDBZR]
+[pin_to_pin]: Pins of type Unspecified and Passive are connected
+    ; warning
+    @(1450 mils, 9150 mils): Symbol U2 Pin 1 [CATHODE, Unspecified, Line]
+    @(1450 mils, 2300 mils): Symbol R3 Pin 2 [Passive, Line]
+[footprint_link_issues]: The current configuration does not include the footprint library ''
+    ; warning
+    @(1550 mils, 3450 mils): Symbol C1 [GRM155R60J106ME05D]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(1550 mils, 3450 mils): Symbol C1 [GRM155R60J106ME05D]
+[pin_to_pin]: Pins of type Unspecified and Power output are connected
+    ; warning
+    @(1550 mils, 3450 mils): Symbol C1 Pin 1 [1, Unspecified, Line]
+    @(1000 mils, 3350 mils): Symbol #FLG5 Pin 1 [Power output, Line]
+[pin_to_pin]: Pins of type Unspecified and Power output are connected
+    ; warning
+    @(1550 mils, 3750 mils): Symbol C1 Pin 2 [2, Unspecified, Line]
+    @(1550 mils, 3900 mils): Symbol #FLG7 Pin 1 [Power output, Line]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(1550 mils, 3900 mils): Symbol #FLG7 [PWR_FLAG]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(1550 mils, 3900 mils): Symbol #PWR02 [GND_SYM]
+[footprint_link_issues]: The current configuration does not include the footprint library ''
+    ; warning
+    @(2350 mils, 3450 mils): Symbol C2 [CL05B104KP5VPNC]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(2350 mils, 3450 mils): Symbol C2 [CL05B104KP5VPNC]
+[pin_to_pin]: Pins of type Unspecified and Power output are connected
+    ; warning
+    @(2350 mils, 3450 mils): Symbol C2 Pin 1 [1, Unspecified, Line]
+    @(1000 mils, 3350 mils): Symbol #FLG5 Pin 1 [Power output, Line]
+[pin_to_pin]: Pins of type Unspecified and Power input are connected
+    ; warning
+    @(2350 mils, 3750 mils): Symbol C2 Pin 2 [2, Unspecified, Line]
+    @(2350 mils, 3900 mils): Symbol #PWR03 Pin 1 [GND, Power input, Line]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(2350 mils, 3900 mils): Symbol #PWR03 [GND_SYM]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(2953 mils, 2953 mils): Horizontal Wire, length 394 mils
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(5709 mils, 3543 mils): Horizontal Wire, length 394 mils
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(5709 mils, 3937 mils): Horizontal Wire, length 394 mils
+[pin_to_pin]: Pins of type Unspecified and Power input are connected
+    ; warning
+    @(6250 mils, 9150 mils): Symbol U2 Pin 3 [CONNECT_TO_ANODE_OR_LEAVE_OPEN, Unspecified, Line]
+    @(6250 mils, 9600 mils): Symbol #PWR09 Pin 1 [GND, Power input, Line]
+[pin_to_pin]: Pins of type Unspecified and Unspecified are connected
+    ; warning
+    @(6250 mils, 9250 mils): Symbol U2 Pin 2 [ANODE, Unspecified, Line]
+    @(6250 mils, 9150 mils): Symbol U2 Pin 3 [CONNECT_TO_ANODE_OR_LEAVE_OPEN, Unspecified, Line]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(6250 mils, 9600 mils): Symbol #PWR09 [GND_SYM]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(9800 mils, 3650 mils): Symbol #FLG4 [PWR_FLAG]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(10300 mils, 3650 mils): Symbol #PWR04 [GND_SYM]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(10750 mils, 3150 mils): Symbol #FLG6 [PWR_FLAG]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(11600 mils, 5250 mils): Symbol R6 [GenericR]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(11600 mils, 5742 mils): Symbol R6 Pin 2 [2, Passive, Line]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(11600 mils, 5742 mils): Vertical Wire, length 308 mils
+[footprint_link_issues]: The current configuration does not include the footprint library ''
+    ; warning
+    @(11650 mils, 3250 mils): Symbol U1 [ADS1115IDGSR]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(11650 mils, 3250 mils): Symbol U1 [ADS1115IDGSR]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(12414 mils, 6035 mils): Symbol Q1 Pin 3 [G, Passive, Line]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(11600 mils, 6050 mils): Wire, length 814 mils
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(12414 mils, 6035 mils): Symbol Q1 [PMOS_PLACEHOLDER]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(12550 mils, 3650 mils): Symbol #PWR05 [GND_SYM]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(13650 mils, 1450 mils): Symbol #FLG3 [PWR_FLAG]
+[footprint_link_issues]: The current configuration does not include the footprint library ''
+    ; warning
+    @(13650 mils, 2050 mils): Symbol R4 [RC0402FR-074K7L]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(13650 mils, 2050 mils): Symbol R4 [RC0402FR-074K7L]
+[pin_to_pin]: Pins of type Unspecified and Power output are connected
+    ; warning
+    @(13650 mils, 2050 mils): Symbol R4 Pin 1 [1, Unspecified, Line]
+    @(13650 mils, 1450 mils): Symbol #FLG3 Pin 1 [Power output, Line]
+[pin_to_pin]: Pins of type Unspecified and Bidirectional are connected
+    ; warning
+    @(13650 mils, 2550 mils): Symbol R4 Pin 2 [2, Unspecified, Line]
+    @(10750 mils, 3250 mils): Symbol U1 Pin 9 [SDA, Bidirectional, Line]
+[footprint_link_issues]: The current configuration does not include the footprint library ''
+    ; warning
+    @(14400 mils, 2050 mils): Symbol R5 [RC0402FR-074K7L]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(14400 mils, 2050 mils): Symbol R5 [RC0402FR-074K7L]
+[pin_to_pin]: Pins of type Unspecified and Power output are connected
+    ; warning
+    @(14400 mils, 2050 mils): Symbol R5 Pin 1 [1, Unspecified, Line]
+    @(13650 mils, 1450 mils): Symbol #FLG3 Pin 1 [Power output, Line]
+[pin_to_pin]: Pins of type Unspecified and Input are connected
+    ; warning
+    @(14400 mils, 2550 mils): Symbol R5 Pin 2 [2, Unspecified, Line]
+    @(12550 mils, 3250 mils): Symbol U1 Pin 6 [AIN2, Input, Line]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(2837 mils, 3500 mils): Symbol #PWR03 Pin 1 [GND, Power input, Line]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(2837 mils, 3500 mils): Horizontal Wire, length 472 mils
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(2837 mils, 3500 mils): Symbol #PWR03 [GND_SYM]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(3309 mils, 3500 mils): Symbol J1 Pin 1 [1, Passive, Line]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(3309 mils, 3500 mils): Vertical Wire, length 100 mils
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(3309 mils, 3500 mils): Symbol J1 [JST_SH_4POS_PLACEHOLDER]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(3309 mils, 3700 mils): Horizontal Wire, length 591 mils
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(3309 mils, 3800 mils): Horizontal Wire, length 591 mils
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(5575 mils, 2150 mils): Horizontal Wire, length 1575 mils
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(5575 mils, 2150 mils): Symbol R1 Pin 1 [1, Unspecified, Line]
+[footprint_link_issues]: The current configuration does not include the footprint library ''
+    ; warning
+    @(5575 mils, 2150 mils): Symbol R1 [RNCF0603TKY10K0]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(5575 mils, 2150 mils): Symbol R1 [RNCF0603TKY10K0]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(5575 mils, 2650 mils): Vertical Wire, length 1419 mils
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(5575 mils, 4069 mils): Symbol RT1 Pin 1 [Passive, Line]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(5575 mils, 4119 mils): Symbol RT1 [NTC_PLACEHOLDER]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(5575 mils, 4569 mils): Vertical Wire, length 534 mils
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(5575 mils, 5103 mils): Symbol #PWR01 Pin 1 [GND, Power input, Line]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(5575 mils, 5103 mils): Symbol #PWR01 [GND_SYM]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(6300 mils, 1550 mils): Vertical Wire, length 591 mils
+[unconnected_wire_endpoint]: Unconnected wire endpoint
+    ; warning
+    @(6300 mils, 1550 mils): Vertical Wire, length 591 mils
+[footprint_link_issues]: The current configuration does not include the footprint library ''
+    ; warning
+    @(7150 mils, 2150 mils): Symbol R2 [RNCF0603TKY10K0]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(7150 mils, 2150 mils): Symbol R2 [RNCF0603TKY10K0]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(7150 mils, 4069 mils): Symbol RT2 Pin 1 [Passive, Line]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(7150 mils, 2650 mils): Vertical Wire, length 1419 mils
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(7150 mils, 4119 mils): Symbol RT2 [NTC_PLACEHOLDER]
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(7150 mils, 4569 mils): Vertical Wire, length 534 mils
+[endpoint_off_grid]: Symbol pin or wire end off connection grid
+    ; warning
+    @(7150 mils, 5103 mils): Symbol #PWR02 Pin 1 [GND, Power input, Line]
+[lib_symbol_issues]: The current configuration does not include the symbol library ''
+    ; warning
+    @(7150 mils, 5103 mils): Symbol #PWR02 [GND_SYM]
+
+***** Sheet /Millstone-Differential Bridge/
+[pin_to_pin]: Pins of type Unspecified and Unspecified are connected
+    ; warning
+    @(5575 mils, 2150 mils): Symbol R1 Pin 1 [1, Unspecified, Line]
+    @(7150 mils, 2150 mils): Symbol R2 Pin 1 [1, Unspecified, Line]
+[pin_to_pin]: Pins of type Unspecified and Passive are connected
+    ; warning
+    @(5575 mils, 2650 mils): Symbol R1 Pin 2 [2, Unspecified, Line]
+    @(5575 mils, 4069 mils): Symbol RT1 Pin 1 [Passive, Line]
+[pin_to_pin]: Pins of type Unspecified and Passive are connected
+    ; warning
+    @(7150 mils, 2650 mils): Symbol R2 Pin 2 [2, Unspecified, Line]
+    @(7150 mils, 4069 mils): Symbol RT2 Pin 1 [Passive, Line]
+
+ ** ERC messages: 77  Errors 2  Warnings 75
+
+ ** Ignored checks:
+    - Global label only appears once in the schematic
+    - Four connection points are joined together
+    - SPICE model issue
+    - Assigned footprint doesn't match footprint filters

@@ -658,13 +658,22 @@
       {
         "filename": "SENSOR_MoonTempTracer.kicad_sch",
         "name": "SENSOR_MoonTempTracer",
-        "uuid": "00000000-0000-0000-0000-000000000000"
+        "uuid": "84044aee-c725-420f-8775-e118e2b7d8f5"
       }
     ],
     "used_designators": "U1",
     "variants": []
   },
-  "sheets": [],
+  "sheets": [
+    [
+      "84044aee-c725-420f-8775-e118e2b7d8f5",
+      "SENSOR_MoonTempTracer"
+    ],
+    [
+      "52029c61-137d-4547-b0e4-faeb67f02176",
+      "Millstone-Differential Bridge"
+    ]
+  ],
   "text_variables": {},
   "tuning_profiles": {
     "meta": {
