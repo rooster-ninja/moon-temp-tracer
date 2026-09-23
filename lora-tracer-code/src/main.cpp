@@ -21,8 +21,6 @@
 
 SX1262 radio = new Module(PIN_CS, PIN_DIO1, PIN_RESET, PIN_BUSY);
 
-// Every frame is exactly FRAME_SIZE bytes, zero-padded.
-// Layout: [0]=type [1]=source_id [2..]=payload (per type, rest unused/zero)
 #define FRAME_SIZE 20
 
 #define FRAME_STEPPER_CONTROL 0x01
@@ -46,6 +44,18 @@ void readADCChannels(float *out, uint8_t count) {
   for (uint8_t i = 0; i < count; i++) out[i] = fake + i;
   fake += 0.1;
   LOGD("readADCChannels: generated %d fake values, base=%.3f", count, fake);
+}
+
+// Emits a machine-parseable line for the Pi-side Reticulum bridge to pick up
+void sendToReticulum(uint8_t sourceId, float *values, uint8_t count) {
+  Serial.print("RNS:{\"source\":");
+  Serial.print(sourceId);
+  Serial.print(",\"values\":[");
+  for (uint8_t i = 0; i < count; i++) {
+    Serial.print(values[i], 3);
+    if (i < count - 1) Serial.print(",");
+  }
+  Serial.println("]}");
 }
 
 void sendFrame(uint8_t buf[FRAME_SIZE]) {
@@ -119,7 +129,7 @@ void handleFrame(uint8_t data[FRAME_SIZE]) {
     }
     case FRAME_DATA_RESPONSE: {
       uint8_t count = data[2];
-      if (count > 4) count = 4;  // safety clamp, belt-and-suspenders
+      if (count > 4) count = 4;
       float values[4];
       memcpy(values, &data[3], count * sizeof(float));
       String vals = "";
@@ -127,6 +137,7 @@ void handleFrame(uint8_t data[FRAME_SIZE]) {
         vals += String(values[i], 3) + " ";
       }
       LOGI("Received DATA_RESPONSE from 0x%02X: %s", sourceId, vals.c_str());
+      sendToReticulum(sourceId, values, count);
       break;
     }
     case FRAME_ACK: {
