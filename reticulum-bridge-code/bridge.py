@@ -1,5 +1,6 @@
 import serial
 import json
+import threading
 import time
 import RNS
 
@@ -10,6 +11,34 @@ BAUD = 115200
 PEER_HASH_HEX = "d8560d80c4d1dbad237c08b95b711cc5"
 APP_NAME = "helloworld"
 ASPECT = "node"
+
+# Downlink: the server addresses this destination to push Moon-tracking
+# targets down to the gateway. Separate app/aspect from the uplink OUT
+# destination above, since this is a distinct (inbound) destination.
+DOWNLINK_APP_NAME = "moontracer"
+DOWNLINK_ASPECT = "downlink"
+
+serial_lock = threading.Lock()
+
+
+def make_downlink_callback(ser):
+    def on_downlink_packet(message, packet):
+        text = message.decode("utf-8", errors="replace")
+        try:
+            data = json.loads(text)
+            az = float(data["az"])
+            alt = float(data["alt"])
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            print(f"Malformed downlink packet, skipping: {text}")
+            return
+
+        cmd = f"SET:{az:.2f},{alt:.2f}\n"
+        with serial_lock:
+            ser.write(cmd.encode("utf-8"))
+        print(f"Downlink -> gateway: {cmd.strip()}")
+
+    return on_downlink_packet
+
 
 def main():
     reticulum = RNS.Reticulum()
@@ -41,10 +70,25 @@ def main():
     )
 
     ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
+
+    # IN destination the server addresses to send downlink targets to this
+    # bridge. RNS packet delivery runs on its own thread, so serial writes
+    # from the callback are serialized against the uplink read loop below
+    # via serial_lock.
+    downlink_dest = RNS.Destination(
+        my_identity, RNS.Destination.IN, RNS.Destination.SINGLE,
+        DOWNLINK_APP_NAME, DOWNLINK_ASPECT
+    )
+    downlink_dest.set_proof_strategy(RNS.Destination.PROVE_ALL)
+    downlink_dest.set_packet_callback(make_downlink_callback(ser))
+    downlink_dest.announce()
+    print(f"Downlink destination: {RNS.prettyhexrep(downlink_dest.hash)}")
+
     print(f"Bridge listening on {SERIAL_PORT}, forwarding to peer...")
 
     while True:
-        line = ser.readline().decode("utf-8", errors="replace").strip()
+        with serial_lock:
+            line = ser.readline().decode("utf-8", errors="replace").strip()
         if not line:
             continue
         if line.startswith("RNS:"):
