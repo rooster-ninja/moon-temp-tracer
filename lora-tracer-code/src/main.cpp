@@ -219,20 +219,36 @@ void handleFrame(uint8_t data[FRAME_SIZE]) {
 
   switch (type) {
     case FRAME_STEPPER_CONTROL: {
+      // Only the gateway sends this - a field node hearing one is a real
+      // command; a gateway hearing one is its own transmission bouncing
+      // back (RF self-reception), not a peer. Acting on it there wastes
+      // airtime replying to itself and corrupts the log with fake activity.
+#ifndef ROLE_GATEWAY
       float az, alt;
       memcpy(&az, &data[2], 4);
       memcpy(&alt, &data[6], 4);
       LOGI("Received STEPPER_CONTROL from 0x%02X az=%.3f alt=%.3f", sourceId, az, alt);
       setTarget(az, alt);
       sendAck(seqCounter++);
+#else
+      LOGD("Ignoring STEPPER_CONTROL from 0x%02X (gateway-only sends this - self-echo)", sourceId);
+#endif
       break;
     }
     case FRAME_DATA_REQUEST: {
+      // Only the gateway sends this - see FRAME_STEPPER_CONTROL above.
+#ifndef ROLE_GATEWAY
       LOGI("Received DATA_REQUEST from 0x%02X", sourceId);
       sendDataResponse();
+#else
+      LOGD("Ignoring DATA_REQUEST from 0x%02X (gateway-only sends this - self-echo)", sourceId);
+#endif
       break;
     }
     case FRAME_DATA_RESPONSE: {
+      // Only the field node sends this - a gateway hearing one is a real
+      // reply; a field node hearing one is its own echo.
+#ifdef ROLE_GATEWAY
       uint8_t count = data[2];
       if (count > 4) count = 4;
       float values[4];
@@ -243,10 +259,18 @@ void handleFrame(uint8_t data[FRAME_SIZE]) {
       }
       LOGI("Received DATA_RESPONSE from 0x%02X: %s", sourceId, vals.c_str());
       sendToReticulum(sourceId, values, count);
+#else
+      LOGD("Ignoring DATA_RESPONSE from 0x%02X (field-only sends this - self-echo)", sourceId);
+#endif
       break;
     }
     case FRAME_ACK: {
+      // Only the field node sends this - see FRAME_DATA_RESPONSE above.
+#ifdef ROLE_GATEWAY
       LOGI("Received ACK from 0x%02X seq=%d", sourceId, data[2]);
+#else
+      LOGD("Ignoring ACK from 0x%02X (field-only sends this - self-echo)", sourceId);
+#endif
       break;
     }
     default: {
