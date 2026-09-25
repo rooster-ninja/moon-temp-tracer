@@ -103,7 +103,14 @@ def main():
     if not RNS.Transport.has_path(dest_hash):
         print("No path to bridge yet, requesting...")
         RNS.Transport.request_path(dest_hash)
-        time.sleep(3)
+        for _ in range(20):
+            time.sleep(0.5)
+            if RNS.Transport.has_path(dest_hash):
+                break
+
+    if not RNS.Transport.has_path(dest_hash):
+        print("Still no path to bridge after 10s - is bridge.py running and reachable? Exiting.")
+        return
 
     bridge_identity = RNS.Identity.recall(dest_hash)
     if not bridge_identity:
@@ -131,10 +138,27 @@ def main():
             or abs(target_az - last_sent[0]) >= MIN_DELTA_DEG
             or abs(target_alt - last_sent[1]) >= MIN_DELTA_DEG
         ):
+            if not RNS.Transport.has_path(dest_hash):
+                print("  (no path to bridge right now - this send will likely be lost)")
+
             payload = json.dumps({"az": round(target_az, 3), "alt": round(target_alt, 3)})
-            RNS.Packet(bridge_dest, payload.encode("utf-8")).send()
+            receipt = RNS.Packet(bridge_dest, payload.encode("utf-8")).send()
             print(f"Sent target az={target_az:.3f} alt={target_alt:.3f} "
                   f"(true az={az:.3f} alt={alt:.3f})")
+
+            # bridge.py's downlink destination uses PROVE_ALL, so a real
+            # delivery produces an explicit proof back to this receipt -
+            # this is the only reliable way to know the packet actually
+            # arrived, since send() succeeding only means it was handed
+            # to an interface, not that anything received it.
+            if receipt:
+                receipt.set_delivery_callback(
+                    lambda r: print(f"  -> delivery CONFIRMED by bridge (rtt={r.get_rtt():.3f}s)")
+                )
+                receipt.set_timeout_callback(
+                    lambda r: print("  -> delivery NOT confirmed (timed out) - bridge likely never received it")
+                )
+
             last_sent = (target_az, target_alt)
 
         time.sleep(args.interval)
