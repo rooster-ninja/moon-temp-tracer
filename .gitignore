@@ -1,2 +1,4 @@
 lora-tracer-code/.pio/
 lora-tracer-code/.vscode/
+__pycache__/
+*.pyc
