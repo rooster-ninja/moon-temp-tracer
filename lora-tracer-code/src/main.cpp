@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <RadioLib.h>
+#include <math.h>
 
 #define PIN_CS        41
 #define PIN_DIO1      39
@@ -40,12 +41,61 @@ volatile bool receivedFlag = false;
 #define AZ_MIN  0.0f
 #define AZ_MAX  180.0f
 
+// --- Field node stepper calibration (TODO, see TODO.md) ---------------
+//
+// These are placeholders. The field node - not the gateway, not the
+// server - is the single source of truth for its own kinematics, since
+// it's the thing that gets physically re-homed/re-geared. Everything
+// below needs real values once the stepper hardware is up:
+//   - STEPS_PER_DEG_AZ/ALT: derived from motor full steps/rev, driver
+//     microstepping, and gear/belt ratio.
+//   - AZ_HOME_OFFSET/ALT_HOME_OFFSET: degrees between the homing
+//     position (wherever the limit switches/homing routine parks the
+//     axis) and az=0/alt=0.
+//   - FIELD_AZ_MIN/MAX, FIELD_ALT_MIN/MAX: the mount's *actual* calibrated
+//     travel, from homing/limit switches - may not exactly match the
+//     generic AZ_MIN/MAX, ALT_MIN/MAX above, which are only a nominal
+//     upstream assumption. This clamp is the real, authoritative one.
+#define STEPS_PER_DEG_AZ   1.0f   // TODO: replace with real gearing-derived value
+#define STEPS_PER_DEG_ALT  1.0f   // TODO: replace with real gearing-derived value
+#define AZ_HOME_OFFSET_DEG  0.0f  // TODO: set from homing routine
+#define ALT_HOME_OFFSET_DEG 0.0f  // TODO: set from homing routine
+#define FIELD_AZ_MIN  AZ_MIN   // TODO: replace with real homed limit
+#define FIELD_AZ_MAX  AZ_MAX   // TODO: replace with real homed limit
+#define FIELD_ALT_MIN ALT_MIN  // TODO: replace with real homed limit
+#define FIELD_ALT_MAX ALT_MAX  // TODO: replace with real homed limit
+
 void setFlag() {
   receivedFlag = true;
 }
 
+// TODO(stepper-hardware): stub until the stepper driver library/pins are
+// chosen (see TODO.md). Converts a calibrated step target into physical
+// motion. For now this just logs what it would do.
+void moveStepperTo(long azSteps, long altSteps) {
+  LOGI("[STUB] moveStepperTo azSteps=%ld altSteps=%ld", azSteps, altSteps);
+}
+
+// TODO(stepper-hardware): real calibration (steps/degree, home offsets,
+// homed limits) isn't wired up yet - see TODO.md. This clamps against
+// placeholder limits and converts using placeholder scale factors so the
+// call shape is right; swap the constants above for real ones and this
+// should just work.
 void setTarget(float az, float alt) {
-  LOGI("[STUB] setTarget az=%.3f alt=%.3f", az, alt);
+  if (az < FIELD_AZ_MIN || az > FIELD_AZ_MAX) {
+    LOGW("setTarget: az=%.3f outside calibrated limits [%.1f,%.1f], clamping", az, FIELD_AZ_MIN, FIELD_AZ_MAX);
+    az = az < FIELD_AZ_MIN ? FIELD_AZ_MIN : FIELD_AZ_MAX;
+  }
+  if (alt < FIELD_ALT_MIN || alt > FIELD_ALT_MAX) {
+    LOGW("setTarget: alt=%.3f outside calibrated limits [%.1f,%.1f], clamping", alt, FIELD_ALT_MIN, FIELD_ALT_MAX);
+    alt = alt < FIELD_ALT_MIN ? FIELD_ALT_MIN : FIELD_ALT_MAX;
+  }
+
+  long azSteps = lroundf((az + AZ_HOME_OFFSET_DEG) * STEPS_PER_DEG_AZ);
+  long altSteps = lroundf((alt + ALT_HOME_OFFSET_DEG) * STEPS_PER_DEG_ALT);
+
+  LOGI("setTarget az=%.3f alt=%.3f -> azSteps=%ld altSteps=%ld", az, alt, azSteps, altSteps);
+  moveStepperTo(azSteps, altSteps);
 }
 
 void readADCChannels(float *out, uint8_t count) {
