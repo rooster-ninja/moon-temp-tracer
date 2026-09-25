@@ -70,9 +70,9 @@ silently get baked in.
 
 | Value | Flag | Where it comes from | Notes |
 |---|---|---|---|
-| Latitude | `--lat` | Tracker's physical install site | Degrees, +N. **TODO: fill in real install coordinates here once known — not yet on file.** |
-| Longitude | `--lon` | Tracker's physical install site | Degrees, +E (so west of Greenwich is negative). **TODO: same as above.** |
-| Elevation | `--elevation` | Tracker's physical install site | Meters above sea level. Optional, defaults to 0 — affects horizon dip by a small, usually negligible amount unless the site is at real altitude. |
+| Latitude | `--lat` | Tracker's physical install site | Degrees, +N. **`50.33805`** (confirmed install coordinates). |
+| Longitude | `--lon` | Tracker's physical install site | Degrees, +E (so west of Greenwich is negative). **`-113.71220`**. |
+| Elevation | `--elevation` | Tracker's physical install site | Meters above sea level. Optional, defaults to 0 — affects horizon dip by a small, usually negligible amount unless the site is at real altitude. **Not yet on file** — bench testing so far has used the default (0). |
 | Bridge destination hash | `--bridge-dest` | Printed by `bridge.py` on startup (step 2) | 32 hex chars. Changes only if the Pi's Reticulum identity file changes. |
 | Cadence | `--interval` | Design choice | Seconds between recomputes/sends, 10–60 typical. Default 30. |
 | Azimuth arc lower bound | `--az-min` | Mount's physical build | Degrees. Default 0. |
@@ -87,8 +87,8 @@ varies per build.
 ```
 cd reticulum-bridge-code
 python3 moon_downlink_daemon.py \
-  --lat <TODO> \
-  --lon <TODO> \
+  --lat 50.33805 \
+  --lon -113.71220 \
   --bridge-dest <hash from step 2> \
   --interval 30
 ```
@@ -103,6 +103,42 @@ It will:
 - Only send a new `SET` when the target has moved enough to matter
   (0.05°), to avoid spamming serial/LoRa every cadence tick with
   near-identical values.
+- Actively poll for a Reticulum path (up to ~10s) before sending, and
+  print `delivery CONFIRMED by bridge (rtt=...)` or `delivery NOT
+  confirmed (timed out)` for every send, using a real proof-based receipt
+  from `bridge.py`'s downlink destination (`PROVE_ALL`) — this is the only
+  reliable way to know a target actually arrived, since `send()` not
+  raising only means it was handed to an interface, not that anything
+  received it.
+
+## Verified working (2026-09-25 bench test)
+
+Full path confirmed end-to-end on the bench, Pi gateway + Mac-tethered
+field node, Mac standing in for the not-yet-provisioned `deb-serv-incus`:
+
+```
+moon_calc.py (real Moon az/alt, lat/lon above)
+  -> Reticulum (daemon -> bridge.py, delivery-confirmed, rtt ~0.17-0.4s)
+  -> gateway serial ("SET:180.00,0.00")
+  -> LoRa STEPPER_CONTROL
+  -> field node (setTarget -> moveStepperTo stub)
+  -> LoRa ACK
+  -> gateway (Received ACK from 0x02)
+```
+
+This also surfaced and fixed two real bugs along the way (see repo history
+on `main`):
+- `moon_downlink_daemon.py` sent regardless of whether a Reticulum path
+  had actually resolved, so failed sends were completely silent on both
+  ends - it now polls `has_path()` and confirms delivery via a packet
+  receipt instead of assuming `send()` succeeding means anything arrived.
+- `handleFrame()` in `lora-tracer-code/src/main.cpp` wasn't role-gated, so
+  the gateway would hear its own transmitted `STEPPER_CONTROL`/
+  `DATA_REQUEST` bounce back (RF self-reception) and process it as if it
+  were real peer traffic - this was consistently winning the gateway's
+  receive slot before the field node's real (slower, real-propagation)
+  reply could land. Each role now only acts on the frame types the other
+  role legitimately sends.
 
 ## 5. Firmware build flags (unchanged, for reference)
 
@@ -117,9 +153,9 @@ build_flags = -D NODE_ID=0x02
 
 ## Still open
 
-- Real install lat/lon/elevation are not yet on file (see the TODOs
-  above) — fill these in once known, ideally right in this doc so they're
-  not re-derived from memory each deployment.
+- Install elevation (meters) is not yet on file — lat/lon are confirmed
+  above, elevation still needs a real value (bench testing has used the
+  default of 0).
 - `--az-min`/`--az-max` here are placeholders (0/180) matching a
   half-circle azimuth arc — confirm against the actual built mount before
   relying on them, and update this doc if the real arc differs.

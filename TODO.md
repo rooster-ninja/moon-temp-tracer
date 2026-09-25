@@ -25,8 +25,18 @@ actually up and running:
 
 ## Downlink setup doc
 
-`docs/downlink_setup.md` has two open TODOs of its own:
-- Real tracker install lat/lon/elevation aren't on file yet — fill in once
-  known.
+`docs/downlink_setup.md` has open TODOs of its own:
+- Install lat/lon are confirmed (`50.33805`, `-113.71220`); elevation is
+  still not on file — fill in once known.
 - `--az-min`/`--az-max` there are placeholders (0/180) — confirm against
   the actual built mount.
+
+## Confirmed working (2026-09-25)
+
+Full downlink path (server ephemeris -> Reticulum -> bridge -> gateway
+serial -> LoRa STEPPER_CONTROL -> field node -> ACK back) verified
+end-to-end on the bench. Two bugs found and fixed along the way: silent
+send failures in `moon_downlink_daemon.py` (no path confirmation) and a
+missing role gate in `handleFrame()` that let the gateway act on its own
+RF self-echoed frames. See `docs/downlink_setup.md`'s "Verified working"
+section for details.

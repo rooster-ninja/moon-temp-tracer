@@ -10,9 +10,10 @@ Alt-az mount that tracks the moon and logs sensor-plate temperatures. This file 
 - Layout:
   - `CAD/`, `hardware/`, `assets/` — Millstone-Differential Bridge sensor circuit (KiCad, Rev F), datasheets
   - `lora-tracer-code/` — PlatformIO firmware for all LoRa nodes (gateway + field roles)
-  - `reticulum-bridge-code/` — `bridge.py` (Pi) and `hello.py` (test receiver)
-  - `moon_calc.py` — SunCalc-style moon position / rise-set / phase calculator (not yet committed to the repo; add it, probably under `reticulum-bridge-code/` or a new `server/` folder)
-- `.gitignore` at repo root excludes `lora-tracer-code/.pio/` and `.vscode/`
+  - `reticulum-bridge-code/` — `bridge.py` (Pi), `hello.py` (test receiver), `moon_calc.py` (pyephem-based Moon az/alt) and `moon_downlink_daemon.py` (server-side downlink loop)
+  - `docs/downlink_setup.md` — full downlink bring-up doc (topology, dependency installs, every required input value and where it comes from)
+  - `TODO.md` — field-node stepper hardware TODOs, downlink doc TODOs
+- `.gitignore` at repo root excludes `lora-tracer-code/.pio/`, `.vscode/`, and Python `__pycache__/`
 
 ## Topology (target)
 
@@ -73,7 +74,10 @@ Every frame is exactly 20 bytes, zero-padded, sent and read as 20 bytes. Do not 
 - RX is interrupt driven: `setDio1Action(setFlag)` + `startReceive()`, then `readData(buf, FRAME_SIZE)` in `loop()`. Do not use blocking `radio.receive()` (it starves the loop).
 - Every send does `standby()`, `delay(10)`, `transmit()`, `startReceive()`.
 - Gateway emits a machine-readable line on each DATA_RESPONSE for the bridge: `RNS:{"source":N,"values":[...]}`. Everything else on serial is human debug text (`[INFO]`, `[WARN]`, `[ERROR]`, `[DEBUG]`).
-- Stubs still in place: `setTarget()` (just logs) and `readADCChannels()` (fake incrementing values). Gateway currently sends a synthetic `az += 1.0` STEPPER_CONTROL plus a DATA_REQUEST every 3 s.
+- `handleFrame()` is role-gated: `STEPPER_CONTROL`/`DATA_REQUEST` are only acted on by the field build, `DATA_RESPONSE`/`ACK` only by the gateway build. Fixed 2026-09-25 — previously ungated, so the gateway would hear its own transmitted frames bounce back (RF self-reception) and process them as if they were real peer traffic; a self-heard frame is now logged at DEBUG and ignored.
+- Gateway parses `SET:<az>,<alt>\n` lines off serial (from `bridge.py`'s downlink callback) via `pollSerialCommands()`/`handleSerialLine()`, and relays them as real `STEPPER_CONTROL` frames — this replaced the old synthetic `az += 1.0` test loop. DATA_REQUEST polling (every 3s) is unchanged/still synthetic.
+- `setTarget()` on the field node is scaffolded (clamps to `FIELD_AZ/ALT_MIN/MAX`, converts to step counts via `STEPS_PER_DEG_AZ/ALT` + home offsets) but `moveStepperTo()` is still a stub that only logs — see `TODO.md` for the real stepper-hardware work.
+- `readADCChannels()` is still a stub (fake incrementing values) — real I2C ADC reads not yet wired up.
 
 ## Firmware build notes / gotchas
 
@@ -87,10 +91,31 @@ Every frame is exactly 20 bytes, zero-padded, sent and read as 20 bytes. Do not 
 
 ## Reticulum bridge (reticulum-bridge-code/bridge.py)
 
-- Runs on the Pi. Reads `/dev/ttyACM0`, picks out `RNS:` lines, sends each JSON payload as an `RNS.Packet` to a SINGLE destination (`APP_NAME="helloworld"`, `ASPECT="node"`).
-- Identity persisted at `~/.reticulum/storage/bridge_identity`.
-- `PEER_HASH_HEX` is still the Mac `hello.py` hash `d8560d80c4d1dbad237c08b95b711cc5`. Replace with the server's hash.
-- Status: forwarding logic works ("Forwarded to Reticulum: {...}" every cycle), but nothing arrives because there is no transport between the Pi and a receiver yet.
+- Runs on the Pi. Reads `/dev/ttyACM0`, picks out `RNS:` lines, sends each JSON payload as an `RNS.Packet` to a SINGLE destination (`APP_NAME="helloworld"`, `ASPECT="node"`) — this is the uplink path.
+- Also now has an **IN** destination (`APP_NAME="moontracer"`, `ASPECT="downlink"`, `PROVE_ALL`) for the downlink: packets received there get turned into `SET:<az>,<alt>\n` on the gateway serial link. Its hash is printed on startup (`Downlink destination: <32 hex>`) and is what `moon_downlink_daemon.py` needs as `--bridge-dest`.
+- Identity persisted at `~/.reticulum/storage/bridge_identity` — both destination hashes are derived from it and stay stable across restarts as long as that file isn't deleted.
+- `PEER_HASH_HEX` (uplink) is still the Mac `hello.py` hash `d8560d80c4d1dbad237c08b95b711cc5`. Replace with the server's hash once `deb-serv-incus` is up.
+- Status: uplink forwarding confirmed working end-to-end (`[RECEIVED]` on a live Reticulum receiver). Downlink confirmed working end-to-end too (see "Downlink — confirmed working" below). `deb-serv-incus` itself is still not provisioned — bench testing used the Mac as a stand-in transport for both directions, over an explicit `[[TCP Server Interface]]`/`[[TCP Client Interface]]` pair in `~/.reticulum/config` on each side (LAN multicast auto-discovery was unreliable between the Pi and Mac).
+
+## Downlink — confirmed working (2026-09-25)
+
+Full path verified end-to-end on the bench (Mac standing in for `deb-serv-incus`):
+
+```
+moon_calc.py (real Moon az/alt, lat=50.33805 lon=-113.71220)
+  -> Reticulum (moon_downlink_daemon.py -> bridge.py, delivery-confirmed via packet receipt, rtt ~0.17-0.4s)
+  -> gateway serial ("SET:180.00,0.00")
+  -> LoRa STEPPER_CONTROL
+  -> field node (setTarget -> moveStepperTo stub)
+  -> LoRa ACK
+  -> gateway (Received ACK from 0x02)
+```
+
+Two real bugs were found and fixed while getting to this point:
+- `moon_downlink_daemon.py` sent regardless of whether a Reticulum path had actually resolved (`Identity.recall()` succeeding only means the peer's public key is cached, not that a route exists), so failed sends were completely silent on both ends. It now polls `has_path()` for up to ~10s and confirms every send via a real proof-based packet receipt (`delivery CONFIRMED (rtt=...)` / `delivery NOT confirmed (timed out)`) instead of assuming `send()` not raising means anything arrived.
+- The gateway/field role-gating bug below (now fixed) was actively blocking this test: the gateway's self-heard echo of its own `STEPPER_CONTROL` was winning its single receive slot before the field node's real (further, slower) reply could land.
+
+See `docs/downlink_setup.md` for the full setup doc and `TODO.md` for what's still open (elevation, az-min/max confirmation, real stepper hardware).
 
 Design decisions already made (keep):
 
@@ -101,18 +126,16 @@ Design decisions already made (keep):
 
 ## Next steps
 
-1. Stand up Reticulum on `deb-serv-incus`: `pip install --break-system-packages rns`, config with `enable_transport = True` and a `TCPServerInterface` on `0.0.0.0:4242`; run the listen-only `hello.py` and record its destination hash. (Instructions were drafted; not yet confirmed done.)
-2. On the Pi add `[[TCP Client]]` `TCPClientInterface` targeting `100.85.82.6:4242`, update `PEER_HASH_HEX`, restart `bridge.py`, confirm `[RECEIVED]` on the server.
-3. Downlink: give `bridge.py` an IN destination; server runs `moon_calc.py` logic and sends az/alt; bridge writes a serial command (e.g. `SET:<az>,<alt>\n`) to the gateway; gateway parses it and calls `sendStepperControl()` instead of the synthetic `az += 1.0`. Open question: real install lat/lon (the `moon_calc.py` docstring example is 50.349, -113.775 in Alberta, which may not be the site).
-4. Replace stubs with hardware: TMC2209 step/dir motion task (plan: pin radio to core 0, motion to core 1 with a mutex-protected target), real I2C ADC reads.
+1. Stand up Reticulum on `deb-serv-incus` for real: `pip install ephem rns` (rns already needed by bridge.py; `ephem` is new for `moon_calc.py`), config with `enable_transport = True` and a `TCPServerInterface` on `0.0.0.0:4242`. Bench testing has proven the whole path works with the Mac standing in for this — swapping in the real server is now just a deployment step, not a design question.
+2. On the Pi, point `bridge.py`'s uplink `PEER_HASH_HEX` and the daemon's `--bridge-dest` target at the real server once it's up (currently pointed at the Mac's `hello.py`/bench `moon_downlink_daemon.py` for testing). Add `[[TCP Client Interface]]` targeting `100.85.82.6:4242` on the Pi (mirroring the bench TCP interface pair used for Mac testing).
+3. Fill in the tracker's real elevation (lat/lon are confirmed: `50.33805`, `-113.71220`) and confirm `--az-min`/`--az-max` (currently placeholder `0`/`180`) against the actual built mount — see `docs/downlink_setup.md`.
+4. Replace stubs with hardware: TMC2209 step/dir motion task (plan: pin radio to core 0, motion to core 1 with a mutex-protected target), real I2C ADC reads, real `STEPS_PER_DEG_AZ/ALT` + home offsets in `main.cpp` (see `TODO.md`).
 5. Wind node (NODE_ID 0x03): Mini-C2A-RS232 ultrasonic sensor (Modbus RTU, 9600 baud, DC 9-30V) -> MAX3232 (SparkFun 3.3V breakout) -> `Serial1` on free XIAO pins -> new frame type (proposed 0x05 WIND_DATA: speed + direction floats).
-6. Persist bridge as a systemd service on the Pi.
+6. Persist bridge (and eventually the downlink daemon) as a systemd service on the Pi/server.
 
 ## Open issues to check
 
-- In recent gateway logs, DATA_REQUEST and DATA_RESPONSE both show source 0x01, and the gateway logs "Received DATA_REQUEST". Either the Mac board is not built with `-D NODE_ID=0x02`, or both boards are running the gateway role. Also `handleFrame()` is not role-gated (a gateway will answer DATA_REQUEST). Verify the Mac board's env/NODE_ID and gate handlers by role.
 - `seqCounter` in ACKs is a local counter on the field node, not an echo of a sequence number sent by the gateway. STEPPER_CONTROL needs a seq field for the ACK to mean anything end to end.
-- `moon_calc.py`: `get_moon_position` contains dead parallax code (`if False`) and an unused refraction term; fine for testing, clean up before relying on it.
 
 ## Shelved hardware (context only)
 
