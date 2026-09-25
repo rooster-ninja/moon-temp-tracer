@@ -31,6 +31,15 @@ SX1262 radio = new Module(PIN_CS, PIN_DIO1, PIN_RESET, PIN_BUSY);
 uint8_t seqCounter = 0;
 volatile bool receivedFlag = false;
 
+// Mount limits, enforced here as a firmware-side safety net in addition to
+// the clamping already done upstream (moon_downlink_daemon.py on the
+// server). Elevation actuator is a hard 0-90 range; azimuth actuator only
+// sweeps a 180 degree arc, not a full circle.
+#define ALT_MIN 0.0f
+#define ALT_MAX 90.0f
+#define AZ_MIN  0.0f
+#define AZ_MAX  180.0f
+
 void setFlag() {
   receivedFlag = true;
 }
@@ -69,6 +78,15 @@ void sendFrame(uint8_t buf[FRAME_SIZE]) {
 }
 
 void sendStepperControl(float az, float alt) {
+  if (az < AZ_MIN || az > AZ_MAX) {
+    LOGW("Clamping az=%.3f to mount arc [%.1f,%.1f]", az, AZ_MIN, AZ_MAX);
+    az = az < AZ_MIN ? AZ_MIN : AZ_MAX;
+  }
+  if (alt < ALT_MIN || alt > ALT_MAX) {
+    LOGW("Clamping alt=%.3f to mount range [%.1f,%.1f]", alt, ALT_MIN, ALT_MAX);
+    alt = alt < ALT_MIN ? ALT_MIN : ALT_MAX;
+  }
+
   uint8_t buf[FRAME_SIZE] = {0};
   buf[0] = FRAME_STEPPER_CONTROL;
   buf[1] = NODE_ID;
@@ -77,6 +95,43 @@ void sendStepperControl(float az, float alt) {
   sendFrame(buf);
   LOGI("Sent STEPPER_CONTROL az=%.3f alt=%.3f", az, alt);
 }
+
+#ifdef ROLE_GATEWAY
+// Reads "SET:<az>,<alt>\n" lines from the Pi bridge over serial and
+// relays them to the field node as STEPPER_CONTROL frames. Non-blocking:
+// accumulates into a line buffer across loop() iterations.
+#define SERIAL_CMD_BUF_LEN 64
+char serialCmdBuf[SERIAL_CMD_BUF_LEN];
+uint8_t serialCmdLen = 0;
+
+void handleSerialLine(const char *line) {
+  float az, alt;
+  if (sscanf(line, "SET:%f,%f", &az, &alt) == 2) {
+    LOGI("Serial SET received az=%.3f alt=%.3f", az, alt);
+    sendStepperControl(az, alt);
+  } else {
+    LOGW("Unrecognized serial command: %s", line);
+  }
+}
+
+void pollSerialCommands() {
+  while (Serial.available() > 0) {
+    char c = (char)Serial.read();
+    if (c == '\n' || c == '\r') {
+      if (serialCmdLen > 0) {
+        serialCmdBuf[serialCmdLen] = '\0';
+        handleSerialLine(serialCmdBuf);
+        serialCmdLen = 0;
+      }
+    } else if (serialCmdLen < SERIAL_CMD_BUF_LEN - 1) {
+      serialCmdBuf[serialCmdLen++] = c;
+    } else {
+      // Line too long, drop it to resync on the next newline.
+      serialCmdLen = 0;
+    }
+  }
+}
+#endif
 
 void sendDataRequest() {
   uint8_t buf[FRAME_SIZE] = {0};
@@ -193,13 +248,11 @@ void loop() {
   }
 
 #ifdef ROLE_GATEWAY
-  static unsigned long lastSend = 0;
-  if (millis() - lastSend > 3000) {
-    lastSend = millis();
-    static float az = 0.0;
-    az += 1.0;
-    sendStepperControl(az, 45.0);
-    delay(200);
+  pollSerialCommands();
+
+  static unsigned long lastDataRequest = 0;
+  if (millis() - lastDataRequest > 3000) {
+    lastDataRequest = millis();
     sendDataRequest();
   }
 #else
