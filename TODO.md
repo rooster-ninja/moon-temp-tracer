@@ -41,14 +41,24 @@ missing role gate in `handleFrame()` that let the gateway act on its own
 RF self-echoed frames. See `docs/downlink_setup.md`'s "Verified working"
 section for details.
 
-## Range test: confirmed working on hardware (2026-09-29)
+## Range test: real bug found and fixed on hardware (2026-09-29)
 
-Both boards reflashed, `range_test.py` run for real against the actual
-gateway/field pair: 0% loss, RSSI -38/-38 dBm, SNR 13.5/13.5 dB at close
-range. Found and fixed a display bug (live status line flickered fake
+First hardware run looked perfect (0% loss, RSSI -38/-38 dBm, SNR
+13.5/13.5 dB) but was testing the gateway against *itself*: unplugging
+the field node entirely still showed 0.0% loss over 7500+ pings, because
+`RANGE_PING`/`RANGE_PONG` handling wasn't role-gated and the gateway was
+answering its own RF-self-echoed ping. Fixed in `main.cpp` by ignoring
+any ping/pong whose `sourceId` matches the receiver's own `NODE_ID`.
+
+**Needs a fresh reflash of both boards and a re-run before trusting any
+range test result** - this hasn't been verified on hardware yet. A
+correct test should show real loss when the field node is unplugged and
+only `RANGE OK` when it's genuinely present.
+
+Also fixed: a cosmetic display bug (live status line flickered fake
 transient loss% between each ping's send and resolution - only updates
 on resolution now). Still open: an actual walk-away distance test, and
-the new Reticulum-monitoring path (`range_test_monitor.py` +
+the Reticulum-monitoring path (`range_test_monitor.py` +
 `range_test.py --reticulum-dest`) hasn't been tried at all yet.
 
 ## Written but not yet run (2026-09-29)

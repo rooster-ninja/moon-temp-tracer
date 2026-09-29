@@ -70,15 +70,32 @@ prints one warning and the local test continues exactly as it would
 without `--reticulum-dest`; a monitoring hiccup never blocks or fails the
 actual test.
 
-## Confirmed working (2026-09-29)
+## History (2026-09-29)
 
-First real-hardware run: 0% loss over the initial stretch of pings at
-close bench range, RSSI -38/-38 dBm, SNR 13.5/13.5 dB both directions —
-consistent with a strong, healthy link. (The live status line briefly
-showed misleading transient loss% values in this first run — a display
-bug in the script, now fixed; it only updates once a round trip has
-actually resolved, not on every ping sent.) Actual walk-away distance
-testing and the Reticulum-monitor path are still untried.
+First real-hardware run looked perfect - 0% loss, RSSI -38/-38 dBm, SNR
+13.5/13.5 dB - but that reading was **not real**: unplugging the field
+node entirely still showed 0.0% loss over 7510+ pings. Root cause was the
+same RF self-reception behavior documented elsewhere in this project (a
+node hearing its own just-transmitted frame bounce back): since
+`RANGE_PING`/`RANGE_PONG` handling is deliberately not role-gated (either
+node should be able to answer a ping), the gateway was also answering its
+own self-heard ping, hearing its own self-generated pong, matching the
+seq, and logging a false `RANGE OK` - testing entirely against itself,
+with or without a field node present at all.
+
+Fixed by ignoring any `RANGE_PING`/`RANGE_PONG` whose `sourceId` equals
+the receiving node's own `NODE_ID` - unambiguously a self-echo, never a
+real frame from elsewhere. **Not yet re-verified against real hardware**
+after this fix - do that before trusting any range test numbers. A
+correct test should now show real (non-zero) loss/timeout behavior when
+the field node is unplugged, and only report `RANGE OK` when it's
+actually present and answering.
+
+Separately, the live status line also briefly showed misleading
+transient loss% values in that first run (a display bug, now fixed - it
+only updates once a round trip has actually resolved, not on every ping
+sent). Actual walk-away distance testing and the Reticulum-monitor path
+are both still untried.
 
 ## Caveats
 

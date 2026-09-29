@@ -142,11 +142,19 @@ one process can hold the port), shows a live RSSI/SNR/loss status line,
 and logs every ping to CSV. Full details and caveats (single field node
 only — no per-node addressing on ping/pong yet) in `docs/range_test.md`.
 
-**Confirmed working on real hardware (2026-09-29)**: 0% loss at close
-bench range, RSSI -38/-38 dBm, SNR 13.5/13.5 dB both directions. Fixed a
-display bug found in that run (live status line flickered fake
-transient loss between every ping's send and resolution). Actual
-walk-away distance testing still not done.
+**Real-hardware testing (2026-09-29) found and fixed a serious bug**: the
+first run looked perfect (0% loss, RSSI -38/-38 dBm, SNR 13.5/13.5 dB),
+but unplugging the field node entirely *still* showed 0.0% loss over
+7500+ pings. Cause: `RANGE_PING`/`RANGE_PONG` handling isn't role-gated
+(either node should answer a ping), so the gateway was also answering its
+own RF self-echoed ping and hearing its own self-generated pong back —
+testing entirely against itself, field node present or not. Fixed by
+ignoring any ping/pong whose `sourceId` equals the receiver's own
+`NODE_ID`. **Not yet re-verified on hardware after this fix** — do that
+before trusting any range test result. Also fixed in the same session: a
+cosmetic display bug (live status line flickered fake transient loss
+between each ping's send and resolution). See `docs/range_test.md`'s
+"History" section. Actual walk-away distance testing still not done.
 
 Can also be watched remotely: `reticulum-bridge-code/range_test_monitor.py`
 (run wherever you want to watch from, e.g. `deb-serv-incus`) receives

@@ -341,6 +341,18 @@ void handleFrame(uint8_t data[FRAME_SIZE]) {
     case FRAME_RANGE_PING: {
       // Not role-gated: whichever node gets pinged pongs back, regardless
       // of gateway/field role, so a range test works in either direction.
+      // But a ping whose sourceId is OUR OWN NODE_ID is unambiguously the
+      // RF self-reception echo documented throughout this project (a node
+      // hearing its own just-transmitted frame bounce back) - real bench
+      // testing showed this being answered too, which turned the "range
+      // test" into the gateway silently testing against itself: it would
+      // report a perfect link with the field node fully unplugged, since
+      // ping, self-heard-ping, pong, and self-heard-pong all happen with
+      // no real second radio involved at all.
+      if (sourceId == NODE_ID) {
+        LOGD("Ignoring RANGE PING from 0x%02X (self-echo)", sourceId);
+        break;
+      }
       uint32_t seq;
       memcpy(&seq, &data[2], 4);
       LOGD("RANGE PING received seq=%lu from 0x%02X, ponging", (unsigned long)seq, sourceId);
@@ -348,6 +360,14 @@ void handleFrame(uint8_t data[FRAME_SIZE]) {
       break;
     }
     case FRAME_RANGE_PONG: {
+      // Same self-echo guard as FRAME_RANGE_PING - belt and suspenders,
+      // since blocking the self-answer above should already prevent this
+      // from ever firing on a self-heard pong, but a real pong should
+      // never carry our own NODE_ID as its source either way.
+      if (sourceId == NODE_ID) {
+        LOGD("Ignoring RANGE PONG from 0x%02X (self-echo)", sourceId);
+        break;
+      }
       uint32_t seq;
       float remoteRssi, remoteSnr;
       memcpy(&seq, &data[2], 4);
