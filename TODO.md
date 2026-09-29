@@ -40,3 +40,24 @@ send failures in `moon_downlink_daemon.py` (no path confirmation) and a
 missing role gate in `handleFrame()` that let the gateway act on its own
 RF self-echoed frames. See `docs/downlink_setup.md`'s "Verified working"
 section for details.
+
+## Written but not yet run (2026-09-29)
+
+Two pieces added on top of the confirmed-working state above — code is
+written and syntax/logic-reviewed, but neither has touched real hardware
+or the real server yet:
+
+- **`deb-serv-incus` Reticulum node**: `reticulum-bridge-code/server_node.py`
+  (production, non-interactive replacement for the bench `hello.py`,
+  logs to CSV) plus a systemd unit template in
+  `reticulum-bridge-code/systemd/`. Setup steps in
+  `docs/downlink_setup.md` section 0. Needs to actually be run on
+  `deb-serv-incus`, and `bridge.py`'s `PEER_HASH_HEX` / the daemon's
+  `--bridge-dest` repointed at it from the Mac bench stand-ins.
+- **LoRa range test**: new `RANGE_PING`/`RANGE_PONG` frame types
+  (0x06/0x07) in `main.cpp`, gateway-driven via serial
+  (`RANGE:START:<ms>`/`RANGE:STOP`), plus
+  `lora-tracer-code/tools/range_test.py` to drive it and log CSV. Both
+  boards need reflashing with the current `main.cpp` before this will
+  work. See `docs/range_test.md`. Known limitation: no per-node
+  addressing, so only run this with a single field-role board powered.

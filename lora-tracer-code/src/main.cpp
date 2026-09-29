@@ -28,9 +28,38 @@ SX1262 radio = new Module(PIN_CS, PIN_DIO1, PIN_RESET, PIN_BUSY);
 #define FRAME_DATA_REQUEST    0x02
 #define FRAME_DATA_RESPONSE   0x03
 #define FRAME_ACK             0x04
+// 0x05 reserved for the planned WIND_DATA frame (wind node, NODE_ID 0x03).
+#define FRAME_RANGE_PING      0x06
+#define FRAME_RANGE_PONG      0x07
 
 uint8_t seqCounter = 0;
 volatile bool receivedFlag = false;
+
+// RSSI/SNR of the most recently received packet, captured in loop() right
+// after a successful readData() and before handleFrame() runs, so a
+// RANGE_PING handler can report what *this* node measured for that ping
+// (each direction of a LoRa link can have different loss, so a range test
+// wants both ends' numbers, not just one).
+float lastRxRSSI = 0.0f;
+float lastRxSNR = 0.0f;
+
+// --- Range test state (gateway-driven, see docs/range_test.md) --------
+//
+// Any node answers a RANGE_PING with a RANGE_PONG unconditionally - this
+// is not role-gated like the operational frame types, since a range test
+// should work regardless of which physical node is being walked away with.
+// Only the gateway actually drives a test (it's the one with a serial
+// link to a host running lora-tracer-code/tools/range_test.py), using a
+// simple stop-and-wait ping: one outstanding ping at a time, matching
+// LoRa's half-duplex, single-receive-buffer nature.
+bool rangeTestActive = false;
+uint32_t rangeSeq = 0;
+uint32_t rangeSent = 0;
+uint32_t rangeReceived = 0;
+unsigned long rangeIntervalMs = 1000;
+unsigned long rangeLastPingAt = 0;
+bool rangeAwaitingPong = false;
+#define RANGE_TIMEOUT_MS 2000
 
 // Mount limits, enforced here as a firmware-side safety net in addition to
 // the clamping already done upstream (moon_downlink_daemon.py on the
@@ -156,9 +185,23 @@ uint8_t serialCmdLen = 0;
 
 void handleSerialLine(const char *line) {
   float az, alt;
+  unsigned long intervalMs;
   if (sscanf(line, "SET:%f,%f", &az, &alt) == 2) {
     LOGI("Serial SET received az=%.3f alt=%.3f", az, alt);
     sendStepperControl(az, alt);
+  } else if (sscanf(line, "RANGE:START:%lu", &intervalMs) == 1) {
+    rangeIntervalMs = intervalMs;
+    rangeSeq = 0;
+    rangeSent = 0;
+    rangeReceived = 0;
+    rangeAwaitingPong = false;
+    rangeLastPingAt = 0;
+    rangeTestActive = true;
+    LOGI("RANGE test started, interval_ms=%lu", intervalMs);
+  } else if (strcmp(line, "RANGE:STOP") == 0) {
+    rangeTestActive = false;
+    float lossPct = rangeSent > 0 ? (100.0f * (rangeSent - rangeReceived) / rangeSent) : 0.0f;
+    LOGI("RANGE SUMMARY sent=%lu received=%lu loss_pct=%.1f", (unsigned long)rangeSent, (unsigned long)rangeReceived, lossPct);
   } else {
     LOGW("Unrecognized serial command: %s", line);
   }
@@ -210,6 +253,28 @@ void sendAck(uint8_t seq) {
   buf[2] = seq;
   sendFrame(buf);
   LOGI("Sent ACK seq=%d", seq);
+}
+
+void sendRangePing() {
+  uint8_t buf[FRAME_SIZE] = {0};
+  buf[0] = FRAME_RANGE_PING;
+  buf[1] = NODE_ID;
+  memcpy(&buf[2], &rangeSeq, 4);
+  sendFrame(buf);
+  rangeAwaitingPong = true;
+  rangeLastPingAt = millis();
+  rangeSent++;
+  LOGI("RANGE PING seq=%lu", (unsigned long)rangeSeq);
+}
+
+void sendRangePong(uint32_t seq, float rssi, float snr) {
+  uint8_t buf[FRAME_SIZE] = {0};
+  buf[0] = FRAME_RANGE_PONG;
+  buf[1] = NODE_ID;
+  memcpy(&buf[2], &seq, 4);
+  memcpy(&buf[6], &rssi, 4);
+  memcpy(&buf[10], &snr, 4);
+  sendFrame(buf);
 }
 
 void handleFrame(uint8_t data[FRAME_SIZE]) {
@@ -273,6 +338,32 @@ void handleFrame(uint8_t data[FRAME_SIZE]) {
 #endif
       break;
     }
+    case FRAME_RANGE_PING: {
+      // Not role-gated: whichever node gets pinged pongs back, regardless
+      // of gateway/field role, so a range test works in either direction.
+      uint32_t seq;
+      memcpy(&seq, &data[2], 4);
+      LOGD("RANGE PING received seq=%lu from 0x%02X, ponging", (unsigned long)seq, sourceId);
+      sendRangePong(seq, lastRxRSSI, lastRxSNR);
+      break;
+    }
+    case FRAME_RANGE_PONG: {
+      uint32_t seq;
+      float remoteRssi, remoteSnr;
+      memcpy(&seq, &data[2], 4);
+      memcpy(&remoteRssi, &data[6], 4);
+      memcpy(&remoteSnr, &data[10], 4);
+      if (rangeAwaitingPong && seq == rangeSeq) {
+        unsigned long rtt = millis() - rangeLastPingAt;
+        rangeReceived++;
+        rangeAwaitingPong = false;
+        LOGI("RANGE OK seq=%lu rtt_ms=%lu rssi_local=%.1f snr_local=%.1f rssi_remote=%.1f snr_remote=%.1f",
+             (unsigned long)seq, rtt, lastRxRSSI, lastRxSNR, remoteRssi, remoteSnr);
+      } else {
+        LOGD("RANGE PONG seq=%lu ignored (not awaiting, or expected %lu)", (unsigned long)seq, (unsigned long)rangeSeq);
+      }
+      break;
+    }
     default: {
       LOGW("Unknown frame type 0x%02X from 0x%02X", type, sourceId);
       break;
@@ -313,7 +404,9 @@ void loop() {
     uint8_t buf[FRAME_SIZE];
     int state = radio.readData(buf, FRAME_SIZE);
     if (state == RADIOLIB_ERR_NONE) {
-      LOGD("Packet received, RSSI=%.1f, SNR=%.1f", radio.getRSSI(), radio.getSNR());
+      lastRxRSSI = radio.getRSSI();
+      lastRxSNR = radio.getSNR();
+      LOGD("Packet received, RSSI=%.1f, SNR=%.1f", lastRxRSSI, lastRxSNR);
       handleFrame(buf);
     } else {
       LOGW("readData() returned code=%d", state);
@@ -324,10 +417,24 @@ void loop() {
 #ifdef ROLE_GATEWAY
   pollSerialCommands();
 
-  static unsigned long lastDataRequest = 0;
-  if (millis() - lastDataRequest > 3000) {
-    lastDataRequest = millis();
-    sendDataRequest();
+  if (rangeTestActive) {
+    // Stop-and-wait: only ever one outstanding ping. A miss just means
+    // the timeout fired before a pong arrived - log it and move on to
+    // the next seq rather than blocking the test on a single lost frame.
+    if (rangeAwaitingPong && (millis() - rangeLastPingAt > RANGE_TIMEOUT_MS)) {
+      LOGI("RANGE MISS seq=%lu", (unsigned long)rangeSeq);
+      rangeAwaitingPong = false;
+    }
+    if (!rangeAwaitingPong && (millis() - rangeLastPingAt >= rangeIntervalMs)) {
+      rangeSeq++;
+      sendRangePing();
+    }
+  } else {
+    static unsigned long lastDataRequest = 0;
+    if (millis() - lastDataRequest > 3000) {
+      lastDataRequest = millis();
+      sendDataRequest();
+    }
   }
 #else
   static unsigned long lastHeartbeat = 0;

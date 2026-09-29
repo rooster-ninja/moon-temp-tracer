@@ -27,15 +27,63 @@ deb-serv-incus                  Pi                      gateway ESP32        fie
 - The gateway ESP32 (`ROLE_GATEWAY` build) reads `SET:` lines off serial
   and relays them to the field node as `STEPPER_CONTROL` LoRa frames.
 
-## 1. Install dependencies
+## 0. Stand up the Reticulum node on deb-serv-incus
 
-**On the server (deb-serv-incus):**
+Bench testing (2026-09-25) proved the whole downlink path works with the
+Mac standing in for this server over an explicit TCP interface pair. This
+section is that same setup, for real, on `deb-serv-incus`.
+
 ```
 pip install ephem rns
 ```
 `ephem` (pyephem) computes Moon position from a built-in analytic model —
 no ephemeris file download required, so this works without internet
 access at runtime.
+
+Add a TCP server interface to `~/.reticulum/config` on the server, under
+its `[interfaces]` section:
+```
+  [[TCP Server Interface]]
+    type = TCPServerInterface
+    interface_enabled = True
+    listen_ip = 0.0.0.0
+    listen_port = 4242
+```
+
+Run the production uplink receiver (`reticulum-bridge-code/server_node.py`
+— a non-interactive replacement for the bench `hello.py`, logs every
+received reading to `reticulum-bridge-code/data/uplink_log.csv` as well
+as the console):
+```
+cd reticulum-bridge-code
+python3 server_node.py
+```
+It prints its destination hash on startup — copy that into `bridge.py`'s
+`PEER_HASH_HEX` on the Pi (replacing the Mac `hello.py` hash used for
+bench testing).
+
+To persist this across reboots, see
+`reticulum-bridge-code/systemd/reticulum-server-node.service.example`
+(a template — copy it to `/etc/systemd/system/`, fix `User`/paths, then
+`systemctl enable --now reticulum-server-node`).
+
+On the Pi, add the matching client interface to `~/.reticulum/config`:
+```
+  [[TCP Client Interface]]
+    type = TCPClientInterface
+    interface_enabled = True
+    target_host = 100.85.82.6
+    target_port = 4242
+```
+Restart `bridge.py` after both sides are in place.
+
+Because Reticulum instances on one host share a single local transport,
+`server_node.py` should be the *first* Reticulum process started on
+`deb-serv-incus` — `moon_downlink_daemon.py` (below) will then join its
+instance as a client automatically, the same way it did with `hello.py`
+during bench testing, instead of each spinning up its own instance.
+
+## 1. Install dependencies
 
 **On the Pi:**
 ```

@@ -1,0 +1,25 @@
+# Template systemd unit for running server_node.py persistently on
+# deb-serv-incus. Copy to /etc/systemd/system/reticulum-server-node.service,
+# fix User/WorkingDirectory/ExecStart for the real deployment, then:
+#
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now reticulum-server-node
+#   journalctl -u reticulum-server-node -f
+#
+# Not installed automatically - this is a reference template only.
+
+[Unit]
+Description=Reticulum server-side uplink node (moon-temp-tracer)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rooster
+WorkingDirectory=/home/rooster/moon-temp-tracer/reticulum-bridge-code
+ExecStart=/usr/bin/python3 server_node.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

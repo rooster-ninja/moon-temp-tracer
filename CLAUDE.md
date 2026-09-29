@@ -10,8 +10,10 @@ Alt-az mount that tracks the moon and logs sensor-plate temperatures. This file 
 - Layout:
   - `CAD/`, `hardware/`, `assets/` — Millstone-Differential Bridge sensor circuit (KiCad, Rev F), datasheets
   - `lora-tracer-code/` — PlatformIO firmware for all LoRa nodes (gateway + field roles)
-  - `reticulum-bridge-code/` — `bridge.py` (Pi), `hello.py` (test receiver), `moon_calc.py` (pyephem-based Moon az/alt) and `moon_downlink_daemon.py` (server-side downlink loop)
+  - `reticulum-bridge-code/` — `bridge.py` (Pi), `hello.py` (bench test receiver), `server_node.py` (production uplink receiver for `deb-serv-incus`), `moon_calc.py` (pyephem-based Moon az/alt), `moon_downlink_daemon.py` (server-side downlink loop), `systemd/` (unit template)
+  - `lora-tracer-code/tools/range_test.py` — host-side LoRa range test driver (see `docs/range_test.md`)
   - `docs/downlink_setup.md` — full downlink bring-up doc (topology, dependency installs, every required input value and where it comes from)
+  - `docs/range_test.md` — LoRa range test how-to
   - `TODO.md` — field-node stepper hardware TODOs, downlink doc TODOs
 - `.gitignore` at repo root excludes `lora-tracer-code/.pio/`, `.vscode/`, and Python `__pycache__/`
 
@@ -69,6 +71,9 @@ Every frame is exactly 20 bytes, zero-padded, sent and read as 20 bytes. Do not 
 | 0x02 | DATA_REQUEST | none |
 | 0x03 | DATA_RESPONSE | uint8 count @2 (clamped to 4), float[count] @3 |
 | 0x04 | ACK | uint8 seq @2 |
+| 0x05 | *(reserved)* | Planned WIND_DATA, not yet implemented — see wind node in Next steps |
+| 0x06 | RANGE_PING | uint32 seq @2 |
+| 0x07 | RANGE_PONG | uint32 seq @2 (echo), float rssi @6, float snr @10 — the ponging node's own measurement of the inbound ping |
 
 - NODE_ID comes from build flags in `platformio.ini`: env `gateway` = `-D ROLE_GATEWAY -D NODE_ID=0x01`, env `field` = `-D NODE_ID=0x02`.
 - RX is interrupt driven: `setDio1Action(setFlag)` + `startReceive()`, then `readData(buf, FRAME_SIZE)` in `loop()`. Do not use blocking `radio.receive()` (it starves the loop).
@@ -124,18 +129,35 @@ Design decisions already made (keep):
 - Identity discovery by announce-on-boot plus Reticulum path caching; only app_name/aspect strings are shared constants.
 - Ratchets enabled on receiving destinations (`enable_ratchets(...)`).
 
+## LoRa range test (lora-tracer-code/tools/range_test.py)
+
+Gateway firmware has a built-in ping/pong mode (`RANGE_PING`/`RANGE_PONG`,
+frame types 0x06/0x07) for characterizing link quality vs. distance:
+whichever node gets pinged pongs back automatically (not role-gated), the
+gateway drives it via serial commands (`RANGE:START:<interval_ms>`,
+`RANGE:STOP`), and normal gateway traffic pauses while a test is active
+so it doesn't collide. `lora-tracer-code/tools/range_test.py` drives it
+from a host on the gateway's serial port (stop `bridge.py` first — only
+one process can hold the port), shows a live RSSI/SNR/loss status line,
+and logs every ping to CSV. Full details and caveats (single field node
+only — no per-node addressing on ping/pong yet) in `docs/range_test.md`.
+Not yet run against real hardware/distance — this is untested tooling,
+try it before trusting the numbers.
+
 ## Next steps
 
-1. Stand up Reticulum on `deb-serv-incus` for real: `pip install ephem rns` (rns already needed by bridge.py; `ephem` is new for `moon_calc.py`), config with `enable_transport = True` and a `TCPServerInterface` on `0.0.0.0:4242`. Bench testing has proven the whole path works with the Mac standing in for this — swapping in the real server is now just a deployment step, not a design question.
-2. On the Pi, point `bridge.py`'s uplink `PEER_HASH_HEX` and the daemon's `--bridge-dest` target at the real server once it's up (currently pointed at the Mac's `hello.py`/bench `moon_downlink_daemon.py` for testing). Add `[[TCP Client Interface]]` targeting `100.85.82.6:4242` on the Pi (mirroring the bench TCP interface pair used for Mac testing).
-3. Fill in the tracker's real elevation (lat/lon are confirmed: `50.33805`, `-113.71220`) and confirm `--az-min`/`--az-max` (currently placeholder `0`/`180`) against the actual built mount — see `docs/downlink_setup.md`.
-4. Replace stubs with hardware: TMC2209 step/dir motion task (plan: pin radio to core 0, motion to core 1 with a mutex-protected target), real I2C ADC reads, real `STEPS_PER_DEG_AZ/ALT` + home offsets in `main.cpp` (see `TODO.md`).
-5. Wind node (NODE_ID 0x03): Mini-C2A-RS232 ultrasonic sensor (Modbus RTU, 9600 baud, DC 9-30V) -> MAX3232 (SparkFun 3.3V breakout) -> `Serial1` on free XIAO pins -> new frame type (proposed 0x05 WIND_DATA: speed + direction floats).
-6. Persist bridge (and eventually the downlink daemon) as a systemd service on the Pi/server.
+1. Run the actual field range test (`docs/range_test.md`) against the real hardware — the code is written but not yet exercised on the bench or in the field.
+2. Stand up Reticulum on `deb-serv-incus` for real, following `docs/downlink_setup.md` section 0 (`server_node.py` + TCP interface config + optional systemd unit). Bench testing proved the whole path works with the Mac standing in for this — swapping in the real server is now just a deployment step, not a design question. Not yet actually run on that host.
+3. Once the server is up, point `bridge.py`'s uplink `PEER_HASH_HEX` and the daemon's `--bridge-dest` target at it (currently pointed at the Mac's bench stand-ins). Add `[[TCP Client Interface]]` targeting `100.85.82.6:4242` on the Pi.
+4. Fill in the tracker's real elevation (lat/lon are confirmed: `50.33805`, `-113.71220`) and confirm `--az-min`/`--az-max` (currently placeholder `0`/`180`) against the actual built mount — see `docs/downlink_setup.md`.
+5. Replace stubs with hardware: TMC2209 step/dir motion task (plan: pin radio to core 0, motion to core 1 with a mutex-protected target), real I2C ADC reads, real `STEPS_PER_DEG_AZ/ALT` + home offsets in `main.cpp` (see `TODO.md`).
+6. Wind node (NODE_ID 0x03): Mini-C2A-RS232 ultrasonic sensor (Modbus RTU, 9600 baud, DC 9-30V) -> MAX3232 (SparkFun 3.3V breakout) -> `Serial1` on free XIAO pins -> new frame type (proposed... actually 0x05 is now reserved for WIND_DATA per `main.cpp`'s frame-type comments; 0x06/0x07 are taken by RANGE_PING/PONG, so WIND_DATA stays at 0x05, next free is 0x08).
+7. Persist bridge (and eventually the downlink daemon) as a systemd service on the Pi/server — template for the server side is in `reticulum-bridge-code/systemd/`.
 
 ## Open issues to check
 
 - `seqCounter` in ACKs is a local counter on the field node, not an echo of a sequence number sent by the gateway. STEPPER_CONTROL needs a seq field for the ACK to mean anything end to end.
+- Range-test ping/pong has no per-node addressing — if more than one field-role board is ever powered on air simultaneously, all of them answer every ping and collide. Fine for the current single-field-node deployment; needs a destination filter before the wind node (NODE_ID 0x03) joins.
 
 ## Shelved hardware (context only)
 

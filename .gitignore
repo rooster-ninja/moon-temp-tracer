@@ -1,4 +1,6 @@
 lora-tracer-code/.pio/
 lora-tracer-code/.vscode/
+reticulum-bridge-code/data/
+lora-tracer-code/tools/range_test_logs/
 __pycache__/
 *.pyc
