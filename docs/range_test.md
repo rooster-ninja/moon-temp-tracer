@@ -51,6 +51,35 @@ rssi_remote, snr_remote`.
 
 When done, restart `bridge.py` to resume normal uplink/downlink operation.
 
+## Watching a test remotely over Reticulum
+
+Run `reticulum-bridge-code/range_test_monitor.py` wherever you want to
+watch from (e.g. `deb-serv-incus`) — it's a live receiver, same status
+line as the local tool, plus its own CSV log:
+```
+cd reticulum-bridge-code
+python3 range_test_monitor.py
+```
+It prints its destination hash on startup. Pass that to `range_test.py`
+on the Pi:
+```
+python3 range_test.py --port /dev/ttyACM0 --reticulum-dest <hash>
+```
+Forwarding is best-effort — if the monitor can't be reached, `range_test.py`
+prints one warning and the local test continues exactly as it would
+without `--reticulum-dest`; a monitoring hiccup never blocks or fails the
+actual test.
+
+## Confirmed working (2026-09-29)
+
+First real-hardware run: 0% loss over the initial stretch of pings at
+close bench range, RSSI -38/-38 dBm, SNR 13.5/13.5 dB both directions —
+consistent with a strong, healthy link. (The live status line briefly
+showed misleading transient loss% values in this first run — a display
+bug in the script, now fixed; it only updates once a round trip has
+actually resolved, not on every ping sent.) Actual walk-away distance
+testing and the Reticulum-monitor path are still untried.
+
 ## Caveats
 
 - Assumes exactly one field node is powered and in range. If a second

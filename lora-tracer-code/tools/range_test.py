@@ -18,12 +18,24 @@ runs to characterize how RSSI/SNR/loss degrade with distance/obstruction.
 Usage:
     python3 range_test.py --port /dev/ttyACM0 [--interval-ms 1000] [--duration 120]
 
+Optionally forward every result over Reticulum to a
+range_test_monitor.py running elsewhere (e.g. deb-serv-incus), so the
+test can be watched live without a terminal on whatever host the gateway
+is attached to:
+
+    python3 range_test.py --port /dev/ttyACM0 --reticulum-dest <hash>
+
+Reticulum forwarding is best-effort and never blocks or fails the local
+test - if the destination can't be reached, a warning is printed once and
+the test continues logging locally exactly as it would without it.
+
 Ctrl-C stops the test early and prints the same summary the firmware
 would print at the end anyway.
 """
 
 import argparse
 import csv
+import json
 import os
 import re
 import sys
@@ -47,6 +59,71 @@ CSV_FIELDS = ["timestamp", "seq", "status", "rtt_ms", "rssi_local", "snr_local",
 def default_log_path():
     os.makedirs(DEFAULT_LOG_DIR, exist_ok=True)
     return os.path.join(DEFAULT_LOG_DIR, time.strftime("range_%Y%m%d_%H%M%S.csv"))
+
+
+RETICULUM_APP_NAME = "moontracer"
+RETICULUM_ASPECT = "rangetest"
+
+
+def setup_reticulum_forwarder(dest_hash_hex):
+    """Best-effort: returns an RNS OUT Destination to forward results to,
+    or None if it can't be set up (never raises - a monitoring feature
+    should never take down the actual test)."""
+    try:
+        import RNS
+    except ImportError:
+        print("WARNING: --reticulum-dest given but the 'rns' package isn't installed - forwarding disabled.")
+        return None
+
+    try:
+        reticulum = RNS.Reticulum()
+
+        identity_path = RNS.Reticulum.storagepath + "/range_test_sender_identity"
+        try:
+            my_identity = RNS.Identity.from_file(identity_path)
+            if my_identity is None:
+                my_identity = RNS.Identity()
+                my_identity.to_file(identity_path)
+        except Exception:
+            my_identity = RNS.Identity()
+            my_identity.to_file(identity_path)
+
+        dest_hash = bytes.fromhex(dest_hash_hex)
+        if not RNS.Transport.has_path(dest_hash):
+            print("Reticulum: no path to monitor yet, requesting...")
+            RNS.Transport.request_path(dest_hash)
+            for _ in range(20):
+                time.sleep(0.5)
+                if RNS.Transport.has_path(dest_hash):
+                    break
+
+        monitor_identity = RNS.Identity.recall(dest_hash)
+        if not monitor_identity:
+            print("WARNING: could not recall range_test_monitor identity - is it running and announced? Forwarding disabled.")
+            return None
+
+        dest = RNS.Destination(
+            monitor_identity, RNS.Destination.OUT, RNS.Destination.SINGLE,
+            RETICULUM_APP_NAME, RETICULUM_ASPECT
+        )
+        print(f"Reticulum: forwarding results to monitor ({dest_hash_hex[:12]}...)")
+        return dest
+    except Exception as e:
+        print(f"WARNING: Reticulum forwarding setup failed ({e}) - continuing without it.")
+        return None
+
+
+def forward_result(dest, seq, status, rtt=None, rssi_l=None, snr_l=None, rssi_r=None, snr_r=None):
+    if dest is None:
+        return
+    payload = {"seq": seq, "status": status}
+    if status == "ok":
+        payload.update(rtt_ms=rtt, rssi_local=rssi_l, snr_local=snr_l, rssi_remote=rssi_r, snr_remote=snr_r)
+    try:
+        import RNS  # already imported successfully once in setup_reticulum_forwarder; cached by Python
+        RNS.Packet(dest, json.dumps(payload).encode("utf-8")).send()
+    except Exception:
+        pass  # best-effort - never let a forwarding hiccup interrupt the local test
 
 
 class Stats:
@@ -110,11 +187,14 @@ def main():
     parser.add_argument("--interval-ms", type=int, default=1000, help="Ping interval in ms (default 1000)")
     parser.add_argument("--duration", type=float, default=None, help="Auto-stop after this many seconds (default: run until Ctrl-C)")
     parser.add_argument("--log", default=None, help="CSV output path (default: lora-tracer-code/tools/range_test_logs/range_<timestamp>.csv)")
+    parser.add_argument("--reticulum-dest", default=None, help="range_test_monitor.py's destination hash, to forward live results over Reticulum")
     args = parser.parse_args()
 
     log_path = args.log or default_log_path()
     with open(log_path, "w", newline="") as f:
         csv.writer(f).writerow(CSV_FIELDS)
+
+    reticulum_dest = setup_reticulum_forwarder(args.reticulum_dest) if args.reticulum_dest else None
 
     print(f"Opening {args.port} @ {args.baud}...")
     ser = serial.Serial(args.port, args.baud, timeout=1)
@@ -162,6 +242,7 @@ def main():
                 stats.add_ok(rtt, rssi_l, snr_l, rssi_r, snr_r)
                 with open(log_path, "a", newline="") as f:
                     csv.writer(f).writerow([ts, seq, "ok", rtt, rssi_l, snr_l, rssi_r, snr_r])
+                forward_result(reticulum_dest, int(seq), "ok", rtt, rssi_l, snr_l, rssi_r, snr_r)
                 sys.stdout.write("\r" + stats.status_line(int(seq)) + "   ")
                 sys.stdout.flush()
                 continue
@@ -171,6 +252,7 @@ def main():
                 seq = int(m.group(1))
                 with open(log_path, "a", newline="") as f:
                     csv.writer(f).writerow([ts, seq, "miss", "", "", "", "", ""])
+                forward_result(reticulum_dest, seq, "miss")
                 sys.stdout.write("\r" + stats.status_line(seq) + "   ")
                 sys.stdout.flush()
                 continue

@@ -10,7 +10,7 @@ Alt-az mount that tracks the moon and logs sensor-plate temperatures. This file 
 - Layout:
   - `CAD/`, `hardware/`, `assets/` — Millstone-Differential Bridge sensor circuit (KiCad, Rev F), datasheets
   - `lora-tracer-code/` — PlatformIO firmware for all LoRa nodes (gateway + field roles)
-  - `reticulum-bridge-code/` — `bridge.py` (Pi), `hello.py` (bench test receiver), `server_node.py` (production uplink receiver for `deb-serv-incus`), `moon_calc.py` (pyephem-based Moon az/alt), `moon_downlink_daemon.py` (server-side downlink loop), `systemd/` (unit template)
+  - `reticulum-bridge-code/` — `bridge.py` (Pi), `hello.py` (bench test receiver), `server_node.py` (production uplink receiver for `deb-serv-incus`), `moon_calc.py` (pyephem-based Moon az/alt), `moon_downlink_daemon.py` (server-side downlink loop), `range_test_monitor.py` (remote live view of range tests), `systemd/` (unit template)
   - `lora-tracer-code/tools/range_test.py` — host-side LoRa range test driver (see `docs/range_test.md`)
   - `docs/downlink_setup.md` — full downlink bring-up doc (topology, dependency installs, every required input value and where it comes from)
   - `docs/range_test.md` — LoRa range test how-to
@@ -141,8 +141,18 @@ from a host on the gateway's serial port (stop `bridge.py` first — only
 one process can hold the port), shows a live RSSI/SNR/loss status line,
 and logs every ping to CSV. Full details and caveats (single field node
 only — no per-node addressing on ping/pong yet) in `docs/range_test.md`.
-Not yet run against real hardware/distance — this is untested tooling,
-try it before trusting the numbers.
+
+**Confirmed working on real hardware (2026-09-29)**: 0% loss at close
+bench range, RSSI -38/-38 dBm, SNR 13.5/13.5 dB both directions. Fixed a
+display bug found in that run (live status line flickered fake
+transient loss between every ping's send and resolution). Actual
+walk-away distance testing still not done.
+
+Can also be watched remotely: `reticulum-bridge-code/range_test_monitor.py`
+(run wherever you want to watch from, e.g. `deb-serv-incus`) receives
+results forwarded over Reticulum via `range_test.py --reticulum-dest
+<hash>`, mirroring the same live status line. Best-effort — a monitoring
+hiccup never blocks or fails the actual test. Not yet run/tested.
 
 ## Next steps
 

@@ -41,23 +41,23 @@ missing role gate in `handleFrame()` that let the gateway act on its own
 RF self-echoed frames. See `docs/downlink_setup.md`'s "Verified working"
 section for details.
 
+## Range test: confirmed working on hardware (2026-09-29)
+
+Both boards reflashed, `range_test.py` run for real against the actual
+gateway/field pair: 0% loss, RSSI -38/-38 dBm, SNR 13.5/13.5 dB at close
+range. Found and fixed a display bug (live status line flickered fake
+transient loss% between each ping's send and resolution - only updates
+on resolution now). Still open: an actual walk-away distance test, and
+the new Reticulum-monitoring path (`range_test_monitor.py` +
+`range_test.py --reticulum-dest`) hasn't been tried at all yet.
+
 ## Written but not yet run (2026-09-29)
 
-Two pieces added on top of the confirmed-working state above — code is
-written and syntax/logic-reviewed, but neither has touched real hardware
-or the real server yet:
-
-- **`deb-serv-incus` Reticulum node**: `reticulum-bridge-code/server_node.py`
-  (production, non-interactive replacement for the bench `hello.py`,
-  logs to CSV) plus a systemd unit template in
-  `reticulum-bridge-code/systemd/`. Setup steps in
-  `docs/downlink_setup.md` section 0. Needs to actually be run on
-  `deb-serv-incus`, and `bridge.py`'s `PEER_HASH_HEX` / the daemon's
-  `--bridge-dest` repointed at it from the Mac bench stand-ins.
-- **LoRa range test**: new `RANGE_PING`/`RANGE_PONG` frame types
-  (0x06/0x07) in `main.cpp`, gateway-driven via serial
-  (`RANGE:START:<ms>`/`RANGE:STOP`), plus
-  `lora-tracer-code/tools/range_test.py` to drive it and log CSV. Both
-  boards need reflashing with the current `main.cpp` before this will
-  work. See `docs/range_test.md`. Known limitation: no per-node
-  addressing, so only run this with a single field-role board powered.
+`deb-serv-incus` Reticulum node: `reticulum-bridge-code/server_node.py`
+(production, non-interactive replacement for the bench `hello.py`, logs
+to CSV) plus a systemd unit template in `reticulum-bridge-code/systemd/`.
+Setup steps in `docs/downlink_setup.md` section 0. Needs to actually be
+run on `deb-serv-incus`, and `bridge.py`'s `PEER_HASH_HEX` / the daemon's
+`--bridge-dest` repointed at it from the Mac bench stand-ins.
+`reticulum-bridge-code/range_test_monitor.py` (see above) is meant to run
+alongside it there.
