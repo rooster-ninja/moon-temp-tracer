@@ -121,7 +121,6 @@ def main():
     time.sleep(2)  # let the board finish any boot chatter
 
     stats = Stats()
-    last_seq = 0
     stop_sent = False
     start_time = time.time()
 
@@ -148,10 +147,12 @@ def main():
 
             m = PING_RE.search(line)
             if m:
+                # Track the send silently - don't refresh the status line
+                # here, since the round trip (OK/MISS) hasn't resolved yet.
+                # Printing on every send as well as every resolution made
+                # loss% flicker between a transient "still waiting" value
+                # and the real one, which reads as fake intermittent loss.
                 stats.sent += 1
-                last_seq = int(m.group(1))
-                sys.stdout.write("\r" + stats.status_line(last_seq) + "   ")
-                sys.stdout.flush()
                 continue
 
             m = OK_RE.search(line)
